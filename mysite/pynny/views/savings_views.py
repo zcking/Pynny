@@ -51,9 +51,6 @@ def savings(request):
                 notify_on_completion=notify, completed=False, hidden=False, user=request.user).save()
 
         data['alerts'] = {'success': ['<strong>Done!</strong> New Saving created successfully!']}
-        if notify:
-            data['alerts']['info'] = [
-                '<strong>Nice!</strong> Since you asked to be notified, you\'ll receive an email when this Saving is fulfilled']
         data['savings'] = Savings.objects.filter(user=request.user)
         return render(request, 'pynny/savings/savings.html', context=data, status=201)
 
