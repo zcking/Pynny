@@ -1,13 +1,8 @@
 {% extends 'pynny/base/base.html' %}
 
-{% block title %}Savings - Pynny{% endblock %}
+{% block title %}{{ saving.name }} Saving - Pynny{% endblock %}
 
 {% block content %}
-
-<button class="btn btn-primary one-btn-group" type="button" data-toggle="modal" data-target="#createSavingsModal">
-    <i class="fa fa-lg fa-plus-circle"></i>&nbsp;New Saving
-</button>
-
 
 <div class="modal fade" id="createSavingsModal" role="dialog" aria-hidden="true">
     <div class="modal-dialog" role="document">
@@ -133,67 +128,49 @@
     </div>
 </div>
 
-{% if savings %}
-    <div class="row">
-    {% for saving in savings %}
-        <div class="col col-lg-4">
-            <div class="card savings-card">
-                <div class="card-header">
-                    <h5 class="card-title">{{ saving.name }} {% if saving.due_date %}<span class="text-muted">(Due {{ saving.due_date }})</span>{% endif %}</h5>
-                </div>
+<div class="one-btn-group">
+    <button class="btn btn-primary one-btn-group" type="button" data-toggle="modal" data-target="#createSavingsModal">
+        <i class="fa fa-lg fa-plus-circle"></i>&nbsp;New Saving
+    </button>
 
-                <div class="card-body">
-                    <div class="row">
-                        <div class="col-sm-4">
-                            <a href="{% url 'one_saving' savings_id=saving.id %}" class="btn-link">
-                                <button class="btn btn-wide" type="button"><i class="fa fa-lg fa-search-plus"></i></button>
-                            </a>
-                        </div>
-                        <div class="col-sm-4">
-                            <button type="button" class="btn btn-primary btn-wide" data-toggle="modal" data-target="#editSavingsModal" data-id="{{ saving.id }}" data-created-time="{% fmt_time saving.created_time %}" data-name="{{ saving.name }}" data-goal="{{ saving.goal }}" data-balance="{{ saving.balance }}" data-due-date="{% fmt_time saving.due_date %}" data-notify="{{ saving.notify_on_completion }}" data-delete="{{ saving.delete_on_completion }}">
-                                <i class="fa fa-lg fa-pencil"></i>
-                            </button>
-                        </div>
-                        <div class="col-sm-4">
-                            <button type="button" class="btn btn-danger btn-wide" data-toggle="modal" data-target="#deleteSavingsModal" data-id="{{ saving.id }}" data-name="{{ saving.name }}">
-                                <i class="fa fa-lg fa-trash"></i>
-                            </button>
-                        </div>
-                    </div>
-                </div>
+    <button type="button" class="btn btn-primary one-edit-btn" data-toggle="modal" data-target="#editSavingsModal" data-id="{{ saving.id }}" data-created-time="{% fmt_time saving.created_time %}" data-name="{{ saving.name }}" data-goal="{{ saving.goal }}" data-balance="{{ saving.balance }}" data-due-date="{% fmt_time saving.due_date %}" data-notify="{{ saving.notify_on_completion }}" data-delete="{{ saving.delete_on_completion }}">
+        <i class="fa fa-lg fa-pencil"></i> Edit Saving
+    </button>
 
-                <ul class="list-group list-group-flush">
-                    <li class="list-group-item text-center">
-                        Completed: {% if saving.completed %}<i class="fa fa-lg fa-check"></i>{% else %}<i class="fa fa-lg fa-times"></i>{% endif %}
-                    </li>
-                    <li class="list-group-item text-center">
-                        Notify On Completion: {% if saving.notify_on_completion %}<i class="fa fa-lg fa-check"></i>{% else %}<i class="fa fa-lg fa-times"></i>{% endif %}
-                    </li>
-                    <li class="list-group-item text-center">
-                        Delete On Completion: {% if saving.delete_on_completion %}<i class="fa fa-lg fa-check"></i>{% else %}<i class="fa fa-lg fa-times"></i>{% endif %}
-                    </li>
-                    <li class="list-group-item text-center">
-                        <span class="text-muted">Started {{ saving.created_time }}</span>
-                    </li>
-                </ul>
+    <button type="button" class="btn btn-danger one-delete-btn" data-toggle="modal" data-target="#deleteSavingsModal" data-id="{{ saving.id }}" data-name="{{ saving.name }}">
+        <i class="fa fa-lg fa-trash"></i> Delete Saving
+    </button>
+</div>
 
-                <div class="card-footer">
-                    <div class="progress">
-                        <div class="progress-bar progress-bar-striped bg-{% saving_class saving %}" role="progressbar" style="width: {% saving_prg_bar_width saving %}%" aria-valuenow="{{ saving.balance }}" aria-valuemin="0" aria-valuemax="{{ saving.goal }}">
-                            <span>${{ saving.balance }} / ${{ saving.goal }}</span>
-                        </div>
-                    </div>
-                </div>
+<div class="card">
+    <div class="card-header">
+        <h5 class="card-title">{{ saving.name }} {% if saving.due_date %}<span class="text-muted">(Due {{ saving.due_date }})</span>{% endif %}</h5>
+    </div>
+
+    <ul class="list-group list-group-flush">
+        <li class="list-group-item text-center">
+            Completed: {% if saving.completed %}<i class="fa fa-lg fa-check"></i>{% else %}<i class="fa fa-lg fa-times"></i>{% endif %}
+        </li>
+        <li class="list-group-item text-center">
+            Notify On Completion: {% if saving.notify_on_completion %}<i class="fa fa-lg fa-check"></i>{% else %}<i class="fa fa-lg fa-times"></i>{% endif %}
+        </li>
+        <li class="list-group-item text-center">
+            Delete On Completion: {% if saving.delete_on_completion %}<i class="fa fa-lg fa-check"></i>{% else %}<i class="fa fa-lg fa-times"></i>{% endif %}
+        </li>
+        <li class="list-group-item text-center">
+            <span class="text-muted">Started {{ saving.created_time }}</span>
+        </li>
+    </ul>
+
+    <div class="card-footer">
+        <div class="progress">
+            <div class="progress-bar progress-bar-striped bg-{% saving_class saving %}" role="progressbar" style="width: {% saving_prg_bar_width saving %}%" aria-valuenow="{{ saving.balance }}" aria-valuemin="0" aria-valuemax="{{ saving.goal }}">
+                <span>${{ saving.balance }} / ${{ saving.goal }}</span>
             </div>
         </div>
-    {% endfor %}
     </div>
-{% else %}
-    <div class="alert alert-info">
-        <strong>Heads up!</strong> You haven't created any Savings yet. Get started
-        by clicking <span class="alert-link" style="cursor: pointer" data-toggle="modal" data-target="#createSavingsModal">New Saving</span>.
-    </div>
-{% endif %}
+</div>
+
 
 <script>
     $(document).ready(function() {
