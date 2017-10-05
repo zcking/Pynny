@@ -28,6 +28,7 @@ def budget_categories(request):
         # Get the wallets for this user
         data['categories'] = BudgetCategory.objects.filter(user=request.user)
 
+        data['current_tab'] = 'categories'
         return render(request, 'pynny/categories/categories.html', context=data)
     # POST = create a new BudgetCategory
     elif request.method == 'POST':
@@ -40,11 +41,13 @@ def budget_categories(request):
         # Check if the category name exists already
         if BudgetCategory.objects.filter(user=request.user, name=name):
             data = {'alerts': {'errors': ['<strong>Oops!</strong> A category already exists with that name']}}
+            data['current_tab'] = 'categories'
             return render(request, 'pynny/categories/new_category.html', context=data, status=409)
 
         # Create the new BudgetCategory
         BudgetCategory(name=name, is_income=is_income, user=request.user).save()
         data = {'alerts': {'success': ['<strong>Done!</strong> New Category created successfully!']}}
+        data['current_tab'] = 'categories'
         data['categories'] = BudgetCategory.objects.filter(user=request.user)
         return render(request, 'pynny/categories/categories.html', context=data, status=201)
 
@@ -52,13 +55,16 @@ def budget_categories(request):
 @login_required(login_url='/pynny/login')
 def new_category(request):
     '''Create a new BudgetCategory form'''
-    return render(request, 'pynny/categories/new_category.html')
+    data = dict()
+    data['current_tab'] = 'categories'
+    return render(request, 'pynny/categories/new_category.html', context=data)
 
 
 @login_required(login_url='/pynny/login')
 def one_category(request, category_id):
     '''View a specific BudgetCategory'''
     data = {}
+    data['current_tab'] = 'categories'
 
     # Check if the category is owned by the logged in user
     try:

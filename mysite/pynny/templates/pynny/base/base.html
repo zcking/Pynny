@@ -54,31 +54,31 @@
                 <div class="menu-list">
                     <ul id="menu-content" class="menu-content collapse out">
                         <li class="nav-item">
-                            <a class="nav-link active" href="{% url 'dashboard' %}"><i class="fa fa-lg fa-tachometer" aria-hidden="true"></i> Dashboard</a>
+                            <a class="nav-link {% if current_tab == 'dashboard' %}active{% endif %}" href="{% url 'dashboard' %}"><i class="fa fa-lg fa-tachometer" aria-hidden="true"></i> Dashboard</a>
                         </li>
                         <li class="nav-item">
-                            <a class="nav-link" href="#"><i class="fa fa-lg fa-file" aria-hidden="true"></i> Reporting</a>
+                            <a class="nav-link {% if current_tab == 'reporting' %}active{% endif %}" href="#"><i class="fa fa-lg fa-file" aria-hidden="true"></i> Reporting</a>
                         </li>
                         <li class="nav-item">
-                            <a class="nav-link" href="{% url 'wallets' %}"><i class="fa fa-lg fa-bank" aria-hidden="true"></i> Wallets</a>
+                            <a class="nav-link {% if current_tab == 'wallets' %}active{% endif %}" href="{% url 'wallets' %}"><i class="fa fa-lg fa-bank" aria-hidden="true"></i> Wallets</a>
                         </li>
                         <li class="nav-item">
-                            <a class="nav-link" href="{% url 'categories' %}"><i class="fa fa-lg fa-archive" aria-hidden="true"></i> Categories</a>
+                            <a class="nav-link {% if current_tab == 'categories' %}active{% endif %}" href="{% url 'categories' %}"><i class="fa fa-lg fa-archive" aria-hidden="true"></i> Categories</a>
                         </li>
                         <li class="nav-item">
-                            <a class="nav-link" href="{% url 'budgets' %}"><i class="fa fa-lg fa-balance-scale" aria-hidden="true"></i> Budgets</a>
+                            <a class="nav-link {% if current_tab == 'budgets' %}active{% endif %}" href="{% url 'budgets' %}"><i class="fa fa-lg fa-balance-scale" aria-hidden="true"></i> Budgets</a>
                         </li>
                         <li class="nav-item">
-                            <a class="nav-link" href="{% url 'transactions' %}"><i class="fa fa-lg fa-exchange" aria-hidden="true"></i> Transactions</a>
+                            <a class="nav-link {% if current_tab == 'transactions' %}active{% endif %}" href="{% url 'transactions' %}"><i class="fa fa-lg fa-exchange" aria-hidden="true"></i> Transactions</a>
                         </li>
                         <li class="nav-item">
-                            <a class="nav-link" href="#"><i class="fa fa-lg fa-money" aria-hidden="true"></i> Debt</a>
+                            <a class="nav-link {% if current_tab == 'debt' %}active{% endif %}" href="#"><i class="fa fa-lg fa-money" aria-hidden="true"></i> Debt</a>
                         </li>
                         <li class="nav-item">
-                            <a class="nav-link" href="{% url 'savings' %}"><i class="fa fa-lg fa-hourglass-half"></i> Savings</a>
+                            <a class="nav-link {% if current_tab == 'savings' %}active{% endif %}" href="{% url 'savings' %}"><i class="fa fa-lg fa-hourglass-half"></i> Savings</a>
                         </li>
                         <li class="nav-item">
-                            <a class="nav-link" href="#"><i class="fa fa-lg fa-cogs"></i> Settings</a>
+                            <a class="nav-link {% if current_tab == 'settings' %}active{% endif %}" href="#"><i class="fa fa-lg fa-cogs"></i> Settings</a>
                         </li>
                         <li class="nav-item">
                             <a class="nav-link" href="{% url 'logout' %}"><i class="fa fa-lg fa-power-off"></i> Logout</a>

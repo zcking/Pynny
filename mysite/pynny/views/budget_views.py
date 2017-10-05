@@ -39,7 +39,8 @@ def budgets(request):
     '''Display Budgets for a user'''
     # GET = display user's budgets
     if request.method == 'GET':
-        data = {}
+        data = dict()
+        data['current_tab'] = 'budgets'
 
         # Get the wallets for this user
         data['budgets'] = Budget.objects.filter(user=request.user, month__contains=date.strftime(date.today(), '%Y-%m'))
@@ -74,6 +75,7 @@ def budgets(request):
                                                                month__contains=date.strftime(last_month, '%Y-%m'))
             data['budgets'] = Budget.objects.filter(user=request.user,
                                                     month__contains=date.strftime(date.today(), '%Y-%m'))
+            data['current_tab'] = 'budgets'
             return render(request, 'pynny/budgets/new_budget.html', context=data)
 
         # Create the new Budget
@@ -92,6 +94,7 @@ def budgets(request):
                                                            month__contains=date.strftime(last_month, '%Y-%m'))
         data['categories'] = BudgetCategory.objects.filter(user=request.user)
         data['wallets'] = Wallet.objects.filter(user=request.user)
+        data['current_tab'] = 'budgets'
         return render(request, 'pynny/budgets/budgets.html', context=data, status=201)
 
 
@@ -116,6 +119,7 @@ def new_budget(request):
                 ]
             },
         }
+        data['current_tab'] = 'categories'
         return render(request, 'pynny/categories/new_category.html', context=data)
 
     if not data['wallets']:
@@ -126,9 +130,11 @@ def new_budget(request):
                 ]
             },
         }
+        data['current_tab'] = 'wallets'
         return render(request, 'pynny/wallets/new_wallet.html', context=data)
 
     # They have a wallet and category so continue
+    data['current_tab'] = 'budgets'
     return render(request, 'pynny/budgets/new_budget.html', context=data)
 
 
@@ -150,6 +156,7 @@ def one_budget(request, budget_id):
                                                            month__contains=date.strftime(last_month, '%Y-%m'))
         data['wallets'] = Wallet.objects.filter(user=request.user)
         data['alerts'] = {'errors': ['<strong>Oh snap!</strong> That Budget does not exist.']}
+        data['current_tab'] = 'budgets'
         return render(request, 'pynny/budgets/budgets.html', context=data, status=404)
 
     if budget.user != request.user:
@@ -161,6 +168,7 @@ def one_budget(request, budget_id):
         data['categories'] = BudgetCategory.objects.filter(user=request.user)
         data['wallets'] = Wallet.objects.filter(user=request.user)
         data['alerts'] = {'errors': ['<strong>Oh snap!</strong> That Budget isn\'t yours! You don\'t have permission to view it']}
+        data['current_tab'] = 'budgets'
         return render(request, 'pynny/budgets/budgets.html', context=data, status=403)
 
     if request.method == "POST":
@@ -180,6 +188,7 @@ def one_budget(request, budget_id):
                                                                month__contains=date.strftime(last_month, '%Y-%m'))
             data['wallets'] = Wallet.objects.filter(user=request.user)
             data['alerts'] = {'success': ['<strong>Done!</strong> Budget was deleted successfully']}
+            data['current_tab'] = 'budgets'
             return render(request, 'pynny/budgets/budgets.html', context=data)
         elif action == 'edit':
             # Render the edit_budget view
@@ -190,6 +199,7 @@ def one_budget(request, budget_id):
                                                                month__contains=date.strftime(last_month, '%Y-%m'))
             data['categories'] = BudgetCategory.objects.filter(user=request.user)
             data['wallets'] = Wallet.objects.filter(user=request.user)
+            data['current_tab'] = 'budgets'
             return render(request, 'pynny/budgets/edit_budget.html', context=data)
         elif action == 'edit_complete':
             # Get the form data from the request
@@ -214,6 +224,7 @@ def one_budget(request, budget_id):
             data['categories'] = BudgetCategory.objects.filter(user=request.user)
             data['wallets'] = Wallet.objects.filter(user=request.user)
             data['budgets'] = Budget.objects.filter(user=request.user, month__contains=date.strftime(date.today(), '%Y-%m'))
+            data['current_tab'] = 'budgets'
             return render(request, 'pynny/budgets/budgets.html', context=data)
     elif request.method == 'GET':
         # Show the specific Budget data
@@ -225,4 +236,5 @@ def one_budget(request, budget_id):
         data['categories'] = BudgetCategory.objects.filter(user=request.user)
         data['wallets'] = Wallet.objects.filter(user=request.user)
         data['transactions'] = Transaction.objects.filter(category=budget.category).order_by('-created_time')
+        data['current_tab'] = 'budgets'
         return render(request, 'pynny/budgets/one_budget.html', context=data)

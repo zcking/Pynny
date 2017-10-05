@@ -17,7 +17,9 @@ from ..models import Transaction, BudgetCategory, Wallet, Budget
 @login_required(login_url='/pynny/login')
 def transactions(request):
     '''View transactions for a user'''
-    data = {}
+    data = dict()
+    data['current_tab'] = 'transactions'
+
     if request.method == 'GET':
         data['transactions'] = Transaction.objects.filter(user=request.user).order_by('-created_time')
         data['categories'] = BudgetCategory.objects.filter(user=request.user)
@@ -56,7 +58,7 @@ def transactions(request):
         wallet.save()
 
         # Render the transactions
-        data = {'alerts': {'success': ['<strong>Done!</strong> New Transaction recorded successfully!']}}
+        data['alerts'] = {'success': ['<strong>Done!</strong> New Transaction recorded successfully!']}
         data['transactions'] = Transaction.objects.filter(user=request.user).order_by('-created_time')
         data['categories'] = BudgetCategory.objects.filter(user=request.user)
         data['wallets'] = Wallet.objects.filter(user=request.user)
@@ -67,6 +69,7 @@ def transactions(request):
 def new_transaction(request):
     '''View for creating a new transaction'''
     data = {}
+    data['current_tab'] = 'transactions'
     data['categories'] = BudgetCategory.objects.filter(user=request.user)
     data['wallets'] = Wallet.objects.filter(user=request.user)
 
@@ -79,6 +82,7 @@ def new_transaction(request):
                 ]
             },
         }
+        data['current_tab'] = 'categories'
         return render(request, 'pynny/categories/new_category.html', context=data)
 
     if not data['wallets']:
@@ -89,6 +93,7 @@ def new_transaction(request):
                 ]
             },
         }
+        data['current_tab'] = 'wallets'
         return render(request, 'pynny/wallets/new_wallet.html', context=data)
 
     # They have a wallet and category so continue
@@ -100,6 +105,7 @@ def new_transaction(request):
 def one_transaction(request, transaction_id):
     '''View for a single Transaction'''
     data = {}
+    data['current_tab'] = 'transactions'
 
     # Check if transaction is owned by user
     try:
@@ -191,7 +197,7 @@ def one_transaction(request, transaction_id):
             transaction.created_time = _created_time
             transaction.save()
 
-            data = {'alerts': {'success': ['<strong>Done!</strong> Transaction updated successfully!']}}
+            data['alerts'] = {'success': ['<strong>Done!</strong> Transaction updated successfully!']}
             data['transactions'] = Transaction.objects.filter(user=request.user).order_by('-created_time')
             data['categories'] = BudgetCategory.objects.filter(user=request.user)
             data['wallets'] = Wallet.objects.filter(user=request.user)

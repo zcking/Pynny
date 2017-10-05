@@ -21,6 +21,7 @@ def savings(request):
     """Displays savings for a user"""
     # GET = display user's savings
     data = dict()
+    data['current_tab'] = 'savings'
     if request.method == 'GET':
         # Get the savings for this user
         data['savings'] = Savings.objects.filter(user=request.user)
@@ -61,6 +62,8 @@ def savings(request):
 def one_saving(request, savings_id):
     """Used for requests to a single saving (i.e. /savings/3)"""
     data = dict()
+    data['current_tab'] = 'savings'
+
     # Authorize access to the saving
     try:
         saving = Savings.objects.get(id=savings_id)
