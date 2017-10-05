@@ -18,11 +18,12 @@ def wallets(request):
     '''Display Wallets for a user'''
     # GET = display user's wallets
     if request.method == 'GET':
-        data = {}
+        data = dict()
 
         # Get the wallets for this user
         data['wallets'] = Wallet.objects.filter(user=request.user)
 
+        data['current_tab'] = 'wallets'
         return render(request, 'pynny/wallets/wallets.html', context=data)
     # POST = create a new Wallet
     elif request.method == 'POST':
@@ -34,11 +35,13 @@ def wallets(request):
         # Check if the wallet name exists already
         if Wallet.objects.filter(user=request.user, name=name):
             data = {'alerts': {'errors': ['A wallet already exists with that name']}}
+            data['current_tab'] = 'wallets'
             return render(request, 'pynny/wallets/new_wallet.html', context=data)
 
         # Create the new Wallet
         Wallet(name=name, balance=start_balance, user=request.user).save()
         data = {'alerts': {'success': ['<strong>Done!</strong> New wallet created successfully!']}}
+        data['current_tab'] = 'wallets'
         data['wallets'] = Wallet.objects.filter(user=request.user)
         return render(request, 'pynny/wallets/wallets.html', context=data, status=201)
 
@@ -46,18 +49,21 @@ def wallets(request):
 @login_required(login_url='/pynny/login')
 def new_wallet(request):
     '''Display form for creating a new wallet'''
-    return render(request, 'pynny/wallets/new_wallet.html')
+    data = dict()
+    data['current_tab'] = 'wallets'
+    return render(request, 'pynny/wallets/new_wallet.html', context=data)
 
 
 @login_required(login_url='/pynny/login')
 def one_wallet(request, wallet_id):
     '''Handles requests to a specific wallet'''
-    data = {}
+    data = dict()
+    data['current_tab'] = 'wallets'
 
     # Check if the wallet is owned by the logged in user
     try:
         wallet = Wallet.objects.get(id=wallet_id)
-    except:
+    except Wallet.DoesNotExist:
         # DNE
         data['wallets'] = Wallet.objects.filter(user=request.user)
         data['alerts'] = {'errors': ['<strong>Oh snap!</strong> That wallet does not exist.']}
@@ -92,7 +98,7 @@ def one_wallet(request, wallet_id):
             wallet.name = _name
             wallet.save()
 
-            data = {'alerts': {'success': ['<strong>Done!</strong> Wallet updated successfully!']}}
+            data['alerts'] = {'success': ['<strong>Done!</strong> Wallet updated successfully!']}
             data['wallets'] = Wallet.objects.filter(user=request.user)
             return render(request, 'pynny/wallets/wallets.html', context=data)
     elif request.method == 'GET':

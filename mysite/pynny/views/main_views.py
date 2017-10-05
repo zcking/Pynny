@@ -54,6 +54,7 @@ def index(request):
         data['transactions_per_category_colors'].append(colors[color_index])
         color_index = (color_index + 1) % len(colors)
 
+    data['current_tab'] = 'dashboard'
     return render(request, 'pynny/base/dashboard.html', context=data)
 
 
