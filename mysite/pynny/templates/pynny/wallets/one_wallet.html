@@ -169,15 +169,29 @@
             <tr>
                 <th>Amount</th>
                 <th>Category</th>
+                <th>Saving</th>
                 <th>Description</th>
-                <th>Time</th>
+                <th>Recorded</th>
             </tr>
         </thead>
         <tbody>
             {% for trans in transactions %}
                 <tr class="tr-link" data-href="{% url 'one_transaction' transaction_id=trans.id %}">
                     <td>${{ trans.amount }}</td>
-                    <td>{{ trans.category.name }}</td>
+                    {% if trans.category %}
+                        <td class="text-{% category_class trans.category.is_income %}">
+                            {{ trans.category.name }}
+                        </td>
+                    {% else %}
+                        <td>N/A</td>
+                    {% endif %}
+                    {% if trans.saving %}
+                        <td class="text-{% saving_class trans.saving %}">
+                            {{ trans.saving.name }}
+                        </td>
+                    {% else %}
+                        <td>N/A</td>
+                    {% endif %}
                     <td>{{ trans.description }}</td>
                     <td>{{ trans.created_time }}</td>
                 </tr>
@@ -201,8 +215,8 @@ $(document).ready(function() {
 
   $("#walletTransactionsTable").DataTable({
     dom: 'lrtip',
-    order: [[3, "desc"], [1, "desc"]],
-    paging: false,
+    order: [[4, "desc"]],
+    lengthMenu: [[10, 25, 50, 100, -1], [10, 25, 50, 100, 'All']]
   });
 
   $('#editWalletModal').on('show.bs.modal', function(event) {
