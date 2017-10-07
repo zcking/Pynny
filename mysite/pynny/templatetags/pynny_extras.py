@@ -82,15 +82,19 @@ def transaction_class(transaction):
     if transaction.amount == 0:
         return 'default'
 
-    is_income = transaction.category.is_income
-    if is_income:
-        if transaction.amount >= 0:
-            return 'success'
-        return 'danger'
-    else:
-        if transaction.amount >= 0:
+    if transaction.category:
+        is_income = transaction.category.is_income
+        if is_income:
+            if transaction.amount >= 0:
+                return 'success'
             return 'danger'
-        return 'success'
+        else:
+            if transaction.amount >= 0:
+                return 'danger'
+            return 'success'
+    elif transaction.saving:
+        return 'success' if transaction.amount > 0 else 'danger'
+    return 'default'
 
 
 @register.simple_tag
