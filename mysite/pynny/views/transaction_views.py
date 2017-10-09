@@ -11,7 +11,8 @@ from django.shortcuts import render, redirect, reverse
 from django.contrib.auth.decorators import login_required
 import decimal
 
-from ..models import Transaction, BudgetCategory, Wallet, Budget
+from . import savings_views
+from ..models import Transaction, BudgetCategory, Wallet, Budget, Savings
 
 
 @login_required(login_url='/pynny/login')
@@ -25,43 +26,82 @@ def transactions(request):
         data['categories'] = BudgetCategory.objects.filter(user=request.user)
         data['wallets'] = Wallet.objects.filter(user=request.user)
         data['default_date'] = date.strftime(date.today(), '%Y-%m-%d')
+        data['savings'] = Savings.objects.filter(user=request.user, completed=False)
         return render(request, 'pynny/transactions/transactions.html', context=data)
     # POST = create a new Transaction
     elif request.method == 'POST':
         # Get the form data from the request
-        _category = int(request.POST['category'])
+        _category = request.POST.get('category', None)
+        _saving = request.POST.get('saving', None)
+
+        if _category is None and _saving is None:
+            data['alerts'] = {'errors': ['<strong>Oh Snap!</strong> Your transaction must either be categorized or put towards a saving']}
+            data['transactions'] = Transaction.objects.filter(user=request.user).order_by('-created_time')
+            data['categories'] = BudgetCategory.objects.filter(user=request.user)
+            data['wallets'] = Wallet.objects.filter(user=request.user)
+            data['default_date'] = date.strftime(date.today(), '%Y-%m-%d')
+            data['savings'] = Savings.objects.filter(user=request.user, completed=False)
+            return render(request, 'pynny/transactions/transactions.html', context=data)
+
+        try:
+            _category = BudgetCategory.objects.get(id=_category) if _category != 'none' else None
+        except BudgetCategory.DoesNotExist:
+            pass
+
+        try:
+            _saving = Savings.objects.get(id=_saving) if _saving != 'none' else None
+        except Savings.DoesNotExist:
+            pass
+
         _wallet = int(request.POST['wallet'])
         _amount = float(request.POST['amount'])
         _description = request.POST['description']
         _created_time = request.POST['created_time'] # %Y-%m-%d date
         _created_time = datetime.strptime(_created_time, '%Y-%m-%d').date()
 
-        category = BudgetCategory.objects.get(id=_category)
         wallet = Wallet.objects.get(id=_wallet)
 
         # Create the new Transaction
-        Transaction(category=category, wallet=wallet, amount=_amount, description=_description, created_time=_created_time, user=request.user).save()
+        if _saving is None:
+            Transaction(category=_category, wallet=wallet, amount=_amount, description=_description, created_time=_created_time, user=request.user).save()
+        else:
+            Transaction(saving=_saving, wallet=wallet, amount=_amount, description=_description, created_time=_created_time, user=request.user).save()
 
         # Update the balance of appropriate budgets
-        budgets = Budget.objects.filter(category=category)
         amount = abs(_amount)
+        data['alerts'] = {'success': [], 'errors': []}
+        if _saving is None:
+            budgets = Budget.objects.filter(category=_category)
 
-        for budget in budgets:
-            budget.balance += decimal.Decimal(amount)
-            budget.save()
+            for budget in budgets:
+                budget.balance += decimal.Decimal(amount)
+                budget.save()
 
-        # Update the wallet balance
-        if category.is_income:
-            wallet.balance += decimal.Decimal(_amount)
+            # Update the wallet balance
+            if _category.is_income:
+                wallet.balance += decimal.Decimal(_amount)
+            else:
+                wallet.balance -= decimal.Decimal(_amount)
+            wallet.save()
         else:
+            # Update the wallet balance
             wallet.balance -= decimal.Decimal(_amount)
-        wallet.save()
+            wallet.save()
+
+            # Update the saving
+            _saving.balance += decimal.Decimal(_amount)
+            _saving.save()
+            if _saving.goal <= _saving.balance:
+                savings_views.complete_saving(_saving)
+                data['alerts']['success'].append('<strong>Congratulations!</strong> You met your Savings goal for "{}"'.format(_saving.name))
+                data['alerts']['success'].append('<strong>Done!</strong> Saving updated successfully')
 
         # Render the transactions
-        data['alerts'] = {'success': ['<strong>Done!</strong> New Transaction recorded successfully!']}
+        data['alerts']['success'].append('<strong>Done!</strong> New Transaction recorded successfully!')
         data['transactions'] = Transaction.objects.filter(user=request.user).order_by('-created_time')
         data['categories'] = BudgetCategory.objects.filter(user=request.user)
         data['wallets'] = Wallet.objects.filter(user=request.user)
+        data['savings'] = Savings.objects.filter(user=request.user, completed=False)
         return render(request, 'pynny/transactions/transactions.html', context=data, status=201)
 
 
@@ -98,6 +138,7 @@ def new_transaction(request):
 
     # They have a wallet and category so continue
     data['default_date'] = date.strftime(date.today(), '%Y-%m-%d')
+    data['savings'] = Savings.objects.filter(user=request.user, completed=False)
     return render(request, 'pynny/transactions/new_transaction.html', context=data)
 
 
@@ -113,12 +154,14 @@ def one_transaction(request, transaction_id):
     except Transaction.DoesNotExist:
         # DNE
         data['transactions'] = Transaction.objects.filter(user=request.user).order_by('-created_time')
+        data['savings'] = Savings.objects.filter(user=request.user, completed=False)
         data['alerts'] = {'errors': ['<strong>Oh snap!</strong> That Transaction does not exist.']}
         return render(request, 'pynny/transactions/transactions.html', context=data, status=404)
 
     if transaction.user != request.user:
         data['transactions'] = Transaction.objects.filter(user=request.user).order_by('-created_time')
         data['alerts'] = {'errors': ['<strong>Oh snap!</strong> That Transaction does not exist.']}
+        data['savings'] = Savings.objects.filter(user=request.user, completed=False)
         return render(request, 'pynny/transactions/transactions.html', context=data, status=403)
 
     if request.method == "POST":
@@ -126,19 +169,7 @@ def one_transaction(request, transaction_id):
         action = request.POST['action'].lower()
         if action == 'delete':
             # Update the balance of appropriate budgets
-            budgets = Budget.objects.filter(category=transaction.category)
-            amount = abs(transaction.amount)
-
-            for budget in budgets:
-                budget.balance -= decimal.Decimal(amount)
-                budget.save()
-
-            # Update Wallet
-            if transaction.category.is_income:
-                transaction.wallet.balance -= decimal.Decimal(transaction.amount)
-            else:
-                transaction.wallet.balance += decimal.Decimal(transaction.amount)
-            transaction.wallet.save()
+            undo_transaction(transaction)
 
             # Delete the Transaction
             transaction.delete()
@@ -148,12 +179,14 @@ def one_transaction(request, transaction_id):
             data['categories'] = BudgetCategory.objects.filter(user=request.user)
             data['wallets'] = Wallet.objects.filter(user=request.user)
             data['alerts'] = {'info': ['<strong>Done!</strong> Transaction was deleted successfully']}
+            data['savings'] = Savings.objects.filter(user=request.user, completed=False)
             return render(request, 'pynny/transactions/transactions.html', context=data)
         elif action == 'edit':
             # Render the edit_transaction view
             data['transaction'] = transaction
             data['categories'] = BudgetCategory.objects.filter(user=request.user)
             data['wallets'] = Wallet.objects.filter(user=request.user)
+            data['savings'] = Savings.objects.filter(user=request.user, completed=False)
             return render(request, 'pynny/transactions/edit_transaction.html', context=data)
         elif action == 'edit_complete':
             # Get the form data from the request
@@ -201,27 +234,38 @@ def one_transaction(request, transaction_id):
             data['transactions'] = Transaction.objects.filter(user=request.user).order_by('-created_time')
             data['categories'] = BudgetCategory.objects.filter(user=request.user)
             data['wallets'] = Wallet.objects.filter(user=request.user)
+            data['savings'] = Savings.objects.filter(user=request.user, completed=False)
             return render(request, 'pynny/transactions/transactions.html', context=data)
     elif request.method == 'GET':
         # Show the specific Transaction data
         data['transaction'] = transaction
         data['categories'] = BudgetCategory.objects.filter(user=request.user)
         data['wallets'] = Wallet.objects.filter(user=request.user)
+        data['savings'] = Savings.objects.filter(user=request.user, completed=False)
         return render(request, 'pynny/transactions/one_transaction.html', context=data)
 
 
 def undo_transaction(trans):
-    '''Reverts the effects of a Transaction on budgets and its wallet'''
+    """Reverts the effects of a Transaction on budgets and its wallet"""
     amount = trans.amount
-    
-    # Replace the money in the category
-    for budget in Budget.objects.filter(category=trans.category):
-        budget.balance -= amount
-        budget.save()
-    
-    # Replace the money in the wallet
-    if trans.category.is_income:
-        trans.wallet.balance -= trans.amount
+
+    # Category or Saving?
+    if trans.saving:
+        trans.saving.balance -= amount
+        trans.saving.completed = trans.saving.goal <= trans.saving.balance
+        trans.saving.save()
+
+        trans.wallet.balance += amount
+        trans.wallet.save()
     else:
-        trans.wallet.balance += trans.amount
-    trans.wallet.save()
+        # Replace the money in the category
+        for budget in Budget.objects.filter(category=trans.category):
+            budget.balance -= amount
+            budget.save()
+
+        # Replace the money in the wallet
+        if trans.category.is_income:
+            trans.wallet.balance -= trans.amount
+        else:
+            trans.wallet.balance += trans.amount
+        trans.wallet.save()

@@ -36,6 +36,8 @@ CSRF_USE_SESSIONS = True
 
 ALLOWED_HOSTS = ['*',]
 
+DATE_FORMAT = 'Y/m/d'
+DATETIME_FORMAT = 'Y/m/d'
 
 # Application definition
 INSTALLED_APPS = [
@@ -126,7 +128,7 @@ TIME_ZONE = 'America/Chicago'
 
 USE_I18N = True
 
-USE_L10N = True
+USE_L10N = False  # overrides the DATE_FORMAT and DATETIME_FORMAT
 
 USE_TZ = True
 

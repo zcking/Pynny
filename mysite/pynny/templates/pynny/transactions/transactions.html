@@ -18,11 +18,23 @@
                 <div class="modal-body">
                     <input type="hidden" name="action" value="create" />
 
-                    <label for="inputTransactionCategory">Category: </label>
+                    <div id="inputTransactionCategoryWrapper">
+                        <label for="inputTransactionCategory">Category: </label>
+                        <div class="input-group">
+                            <select id="inputTransactionCategory" name="category" class="form-control">
+                                {% for category in categories %}
+                                    <option class="text-{% category_class category.is_income %}" value="{{ category.id }}">{{ category.name }}</option>
+                                {% endfor %}
+                            </select>
+                        </div>
+                    </div>
+
+                    <label for="inputTransactionSaving">Towards Saving: </label>
                     <div class="input-group">
-                        <select id="inputTransactionCategory" name="category" class="form-control">
-                            {% for category in categories %}
-                                <option class="text-{% category_class category.is_income %}" value="{{ category.id }}">{{ category.name }}</option>
+                        <select id="inputTransactionSaving" name="saving" class="form-control">
+                            <option id="inputSavingDefault" class="text-muted" value="none">N/A</option>
+                            {% for saving in savings %}
+                                <option class="inputSavingOption text-{% saving_class saving %}" value="{{ saving.id }}">{{ saving.name }}</option>
                             {% endfor %}
                         </select>
                     </div>
@@ -76,11 +88,23 @@
                 <div class="modal-body">
                     <input type="hidden" name="action" value="edit_complete">
 
-                    <label for="editTransactionCategory">Category: </label>
+                    <div id="editTransactionCategoryWrapper">
+                        <label for="editTransactionCategory">Category: </label>
+                        <div class="input-group">
+                            <select id="editTransactionCategory" name="category" class="form-control">
+                                {% for category in categories %}
+                                    <option id="optionCategory{{ category.id }}" class="text-{% category_class category.is_income %}" value="{{ category.id }}">{{ category.name }}</option>
+                                {% endfor %}
+                            </select>
+                        </div>
+                    </div>
+
+                    <label for="editTransactionSaving">Towards Saving: </label>
                     <div class="input-group">
-                        <select id="editTransactionCategory" name="category" class="form-control">
-                            {% for category in categories %}
-                                <option id="optionCategory{{ category.id }}" class="text-{% category_class category.is_income %}" value="{{ category.id }}">{{ category.name }}</option>
+                        <select id="editTransactionSaving" name="saving" class="form-control">
+                            <option id="editSavingDefault" class="text-muted" value="none">N/A</option>
+                            {% for saving in savings %}
+                                <option id="optionSaving{{ saving.id }}" class="editSavingOption text-{% saving_class saving %}" value="{{ saving.id }}">{{ saving.name }}</option>
                             {% endfor %}
                         </select>
                     </div>
@@ -159,6 +183,7 @@
             <tr>
                 <th>Wallet</th>
                 <th>Category</th>
+                <th>Saving</th>
                 <th>Amount</th>
                 <th>Description</th>
                 <th>Recorded</th>
@@ -171,9 +196,20 @@
                     <td class="text-{% wallet_class transaction.wallet.balance %}">
                         {{ transaction.wallet.name }}
                     </td>
-                    <td class="text-{% category_class transaction.category.is_income %}">
-                        {{ transaction.category.name }}
-                    </td>
+                    {% if transaction.category %}
+                        <td class="text-{% category_class transaction.category.is_income %}">
+                            {{ transaction.category.name }}
+                        </td>
+                    {% else %}
+                        <td>N/A</td>
+                    {% endif %}
+                    {% if transaction.saving %}
+                        <td class="text-{% saving_class transaction.saving %}">
+                            {{ transaction.saving.name }}
+                        </td>
+                    {% else %}
+                        <td>N/A</td>
+                    {% endif %}
                     <td class="text-{% transaction_class transaction %}">
                         ${{ transaction.amount }}
                     </td>
@@ -184,10 +220,10 @@
                         {{ transaction.created_time }}
                     </td>
                     <td>
-                        <a href="{% url 'one_transaction' transaction_id=transaction.id %}">
+                        <a class="btn-link" href="{% url 'one_transaction' transaction_id=transaction.id %}">
                             <button class="btn btn-sm" type="button"><i class="fa fa-lg fa-search-plus"></i></button>
                         </a>
-                        <button type="button" class="btn btn-sm btn-primary btn-inline" data-toggle="modal" data-target="#editTransactionModal" data-id="{{ transaction.id }}" data-wallet="{{ transaction.wallet.id }}" data-category="{{ transaction.category.id }}" data-amount="{{ transaction.amount }}" data-description="{{ transaction.description }}" data-date="{% fmt_time transaction.created_time %}">
+                        <button type="button" class="btn btn-sm btn-primary btn-inline" data-toggle="modal" data-target="#editTransactionModal" data-id="{{ transaction.id }}" data-wallet="{{ transaction.wallet.id }}" data-category="{{ transaction.category.id }}" data-amount="{{ transaction.amount }}" data-description="{{ transaction.description }}" data-date="{% fmt_time transaction.created_time %}" data-saving="{% if transaction.saving %}{{ transaction.saving.id }}{% endif %}">
                             <i class="fa fa-lg fa-pencil"></i>
                         </button>
                         <button type="button" class="btn btn-sm btn-danger btn-inline" data-toggle="modal" data-target="#deleteTransactionModal" data-id="{{ transaction.id }}">
@@ -207,12 +243,22 @@
 
 <script>
     $(document).ready(function() {
-        $("#transactionsTable").DataTable({
+        var transTable = $("#transactionsTable").DataTable({
             dom: 'lrtip',
-            order: [[4, "desc"], [0, "desc"], [1, "desc"]],
+            order: [[5, "desc"], [0, "desc"], [1, "desc"]],
             lengthMenu: [[10, 25, 50, -1], [10, 25, 50, 'All']],
             responsive: true,
           });
+
+        $('#inputTransactionSaving').change(function() {
+            var selected = $('#inputTransactionSaving option:selected')[0].value;
+            $('#inputTransactionCategoryWrapper').toggle(selected === "none");
+        });
+
+        $('#editTransactionSaving').change(function() {
+            var selected = $('#editTransactionSaving option:selected')[0].value;
+            $('#editTransactionCategoryWrapper').toggle(selected === "none");
+        });
 
         $('#editTransactionModal').on('show.bs.modal', function(event) {
             var button = $(event.relatedTarget); // button that triggered the modal
@@ -222,11 +268,13 @@
             var transactionAmount = button.data('amount');
             var transactionDescription = button.data('description');
             var transactionDate = button.data('date');
+            var transactionSavingId = button.data('saving');
 
             var modal = $(this);
             modal.find('.form-edit').attr('action', '/pynny/transactions/' + transactionCategoryId);
             modal.find('#optionCategory' + transactionCategoryId).prop('selected', true);
             modal.find('#optionWallet' + transactionWalletId).prop('selected', true);
+            modal.find('#optionSaving' + transactionSavingId).prop('selected', true);
             modal.find('#editTransactionAmount').val(transactionAmount);
             modal.find('#editTransactionDescription').val(transactionDescription);
             modal.find('#editTransactionCreatedAt').val(transactionDate);

@@ -176,9 +176,9 @@
     <table id="transactionsTable" class="table table-striped table-hover table-links" cellspacing="0" width="100%">
         <thead>
             <tr>
-                <th>Trans. #</th>
                 <th>Amount</th>
                 <th>Category</th>
+                <th>Saving</th>
                 <th>Description</th>
                 <th>Time</th>
             </tr>
@@ -186,9 +186,21 @@
         <tbody>
             {% for trans in transactions %}
                 <tr class="tr-link" data-href="{% url 'one_transaction' transaction_id=trans.id %}">
-                    <td>{{ trans.id }}</td>
                     <td>${{ trans.amount }}</td>
-                    <td>{{ trans.category.name }}</td>
+                    {% if trans.category %}
+                        <td class="text-{% category_class trans.category.is_income %}">
+                            {{ trans.category.name }}
+                        </td>
+                    {% else %}
+                        <td>N/A</td>
+                    {% endif %}
+                    {% if trans.saving %}
+                        <td class="text-{% saving_class trans.saving %}">
+                            {{ trans.saving.name }}
+                        </td>
+                    {% else %}
+                        <td>N/A</td>
+                    {% endif %}
                     <td>{{ trans.description }}</td>
                     <td>{{ trans.created_time }}</td>
                 </tr>
@@ -207,7 +219,7 @@
 
         $("#transactionsTable").DataTable({
             dom: 'lrtip',
-            order: [[3, "desc"], [1, "desc"]],
+            order: [[4, "desc"]],
             lengthMenu: [[10, 25, 50, 100, -1], [10, 25, 50, 100, 'All']],
             responsive: true,
           });

@@ -76,6 +76,7 @@ def one_saving(request, savings_id):
 
     if request.method == 'GET':
         data['saving'] = saving
+        data['transactions'] = Transaction.objects.filter(user=request.user, saving=saving)
         return render(request, 'pynny/savings/one_saving.html', context=data)
     elif request.method == 'POST':
         action = request.POST['action'].lower()
