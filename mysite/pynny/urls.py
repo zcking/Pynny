@@ -34,4 +34,5 @@ urlpatterns = [
     url(r'^savings/$', savings_views.savings, name='savings'),  # /savings/
     url(r'^savings/(?P<savings_id>[0-9]+)$', savings_views.one_saving, name='one_saving'),  # /savings/5
     url(r'^notifications/dismiss/$', notification_views.dismiss_notice, name='dismiss_notice'),
+    url(r'^settings/$', main_views.settings_view, name='settings'),  # /settings/
 ]
