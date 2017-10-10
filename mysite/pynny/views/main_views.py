@@ -1,14 +1,14 @@
 #!/usr/bin/python3
-'''
+"""
 File: main_views.py
 Author: Zachary King
 
 Implements the main site views (endpoint handlers) for the Pynny web app.
-'''
+"""
 
 from django.shortcuts import render, reverse, redirect
-from django.contrib.auth import logout
-from django.contrib.auth.decorators import  login_required
+from django.contrib.auth import logout, authenticate, get_user_model
+from django.contrib.auth.decorators import login_required
 
 from datetime import date, datetime
 from django.utils import timezone
@@ -71,3 +71,58 @@ def logout_view(request):
         }
     }
     return render(request, 'registration/login.html', context=data)
+
+
+@login_required(login_url='/pynny/login')
+def settings_view(request):
+    """Handles displaying and updating the logged-in user's settings"""
+    data = dict()
+    data['current_tab'] = 'settings'
+    data['alerts'] = {'success': [], 'errors': [], 'info': [], 'warnings': []}
+
+    if request.method == 'GET':
+        return render(request, 'pynny/base/settings.html', context=data)
+    elif request.method == 'POST':
+        first_name = request.POST.get('first_name', None)
+        last_name = request.POST.get('last_name', None)
+        email = request.POST.get('email', None)
+        username = request.POST.get('username', None)
+        old_pass = request.POST.get('old_password', '')
+        new_pass = request.POST.get('new_password', None)
+        verify_new_pass = request.POST.get('verify_new_password', None)
+
+        has_errors = False
+
+        if authenticate(request, username=request.user.username, password=old_pass):
+            if first_name and first_name != request.user.first_name:
+                request.user.first_name = first_name
+
+            if last_name and last_name != request.user.last_name:
+                request.user.last_name = last_name
+
+            if email and email != request.user.email:
+                if len(get_user_model().objects.filter(email=email)) == 0:
+                    request.user.email = email
+                else:
+                    data['alerts']['errors'].append('<strong>Oh Snap!</strong> A user already exists with that email')
+                    has_errors = True
+
+            if username and username != request.user.username:
+                if len(get_user_model().objects.filter(username=username)) == 0:
+                    request.user.username = username
+                else:
+                    data['alerts']['errors'].append('<strong>Oh Snap!</strong> A user already exists with that username')
+                    has_errors = True
+
+            if new_pass:
+                if verify_new_pass and verify_new_pass == new_pass:
+                    request.user.set_password(new_pass)
+                elif verify_new_pass:
+                    data['alerts']['errors'].append('<strong>Oh Snap!</strong> The new password you entered does match')
+                    has_errors = True
+
+            if not has_errors:
+                request.user.save()
+                data['alerts']['success'].append('<strong>Done!</strong> You\'re settings have been updated successfully!')
+
+            return render(request, 'pynny/base/settings.html', context=data)

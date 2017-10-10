@@ -1,0 +1,51 @@
+{% extends 'pynny/base/base.html' %}
+
+{% block title %}Settings - Pynny{% endblock %}
+
+{% block content %}
+
+<div class="col-lg-6 col-md-6 col-sm-8 col-xs-12 settings-container">
+    <form id="settingsForm" class="form" action="{% url 'settings' %}" method="POST">
+        {% csrf_token %}
+        <label for="inputUsername">Username: </label>
+        <div class="input-group">
+            <input class="form-control" type="text" id="inputUsername" name="username" value="{{ user.username }}"/>
+        </div>
+
+        <br />
+
+        <label for="inputEmail">Email: </label>
+        <input class="form-control" type="email" id="inputEmail" name="email" value="{{ user.email }}" />
+
+        <br />
+
+        <label for="inputFirstName">First Name: </label>
+        <input class="form-control" type="text" id="inputFirstName" name="first_name" value="{{ user.first_name }}" />
+
+        <br />
+
+        <label for="inputLastName">Last Name: </label>
+        <input class="form-control" type="text" id="inputLastName" name="last_name" value="{{ user.last_name }}" />
+
+        <br />
+
+        <label for="inputNewPassword">New Password: </label>
+        <input class="form-control" type="password" id="inputNewPassword" name="new_password"/>
+
+        <br />
+
+        <label for="inputVerifyPassword">Verify Password: </label>
+        <input class="form-control" type="password" id="inputVerifyPassword" name="verify_new_password" />
+
+        <br />
+
+        <label for="inputPassword">Current Password: </label>
+        <input class="form-control" type="password" id="inputPassword" name="old_password" required/>
+
+        <br />
+
+        <button type="submit" class="btn btn-primary">Save</button>
+    </form>
+</div>
+
+{% endblock %}
