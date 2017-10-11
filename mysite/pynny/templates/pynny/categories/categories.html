@@ -20,9 +20,7 @@
 
                     <div class="form-group">
                         <label for="inputCategoryName">Category Name:&nbsp;</label>
-                        <div class="input-group">
-                            <input id="inputCategoryName" type="text" class="form-control" name="name" placeholder="Groceries">
-                        </div>
+                        <input id="inputCategoryName" type="text" class="form-control" name="name" placeholder="Groceries" />
                     </div>
 
                     <div class="form-group">
@@ -147,7 +145,7 @@
 {% else %}
     <div class="alert alert-info">
         <strong>Heads up!</strong> You haven't created any Categories yet. Get started 
-        by clicking <a href="{% url 'new_category' %}">New Category</a>.
+        by clicking <span class="alert-link" style="cursor: pointer" data-toggle="modal" data-target="#createCategoryModal">New Category</span>.
     </div>
 {% endif %}
 

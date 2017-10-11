@@ -145,7 +145,7 @@
 {% else %}
     <div class="alert alert-info">
         <strong>Heads up!</strong> You haven't created any Budgets for this Category yet. You can 
-        create one <a href="{% url 'new_budget' %}">here</a>.
+        create one <a href="{% url 'budgets' %}">here</a>.
     </div>
 {% endif %}
 
@@ -191,7 +191,7 @@
 {% else %}
     <div class="alert alert-info">
         <strong>Heads up!</strong> You haven't recorded any Transactions marked as this Category yet. You 
-        can create one <a href="{% url 'new_transaction' %}">here</a>.
+        can create one <a href="{% url 'transactions' %}">here</a>.
     </div>
 {% endif %}
 

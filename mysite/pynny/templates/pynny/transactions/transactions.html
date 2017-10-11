@@ -237,7 +237,7 @@
 {% else %}
     <div class="alert alert-info">
         <strong>Heads up!</strong> You haven't recorded any Transactions yet. Get started 
-        by clicking <a href="{% url 'new_transaction' %}">New Transaction</a>.
+        by clicking <span class="alert-link" style="cursor: pointer" data-toggle="modal" data-target="#createTransactionModal">New Transaction</span>.
     </div>
 {% endif %}
 
