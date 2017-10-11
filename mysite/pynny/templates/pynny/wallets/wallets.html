@@ -8,7 +8,6 @@
     <i class="fa fa-lg fa-plus-circle"></i>&nbsp;New Wallet
 </button>
 
-{% if wallets %}
 <div class="row">
     <div class="modal fade" id="createWalletModal" role="dialog" aria-hidden="true">
         <div class="modal-dialog" role="document">
@@ -102,47 +101,49 @@
             </div>
         </div>
     </div>
+</div>
 
-    {% for wallet in wallets %}
-    <div class="col col-md-4">
-        <div class="card border-{% wallet_class wallet.balance %} wallet-card">
-            <div class="card-header">
-                <a class="text-dark" href="{% url 'one_wallet' wallet_id=wallet.id %}">
-                    <h4 class="card-title">{{ wallet.name }}</h4>
-                </a>
-            </div>
+    {% if wallets %}
+        {% for wallet in wallets %}
+        <div class="col col-md-4">
+            <div class="card border-{% wallet_class wallet.balance %} wallet-card">
+                <div class="card-header">
+                    <a class="text-dark" href="{% url 'one_wallet' wallet_id=wallet.id %}">
+                        <h4 class="card-title">{{ wallet.name }}</h4>
+                    </a>
+                </div>
 
-            <div class="card-body">
-                Balance:
-                <span class="text-{% wallet_class wallet.balance %}">
-                    ${{ wallet.balance }}
-                </span>
-            </div>
+                <div class="card-body">
+                    Balance:
+                    <span class="text-{% wallet_class wallet.balance %}">
+                        ${{ wallet.balance }}
+                    </span>
+                </div>
 
-            <ul class="list-group list-group-flush">
-                <li class="list-group-item">
-                    <button type="button" class="btn btn-sm btn-primary btn-inline edit-btn" data-toggle="modal" data-target="#editWalletModal" data-id="{{ wallet.id }}" data-name="{{ wallet.name }}">
-                        <i class="fa fa-pencil"></i>&nbsp;Edit
-                    </button>
-                    <button class="btn btn-sm btn-danger btn-inline delete-btn" type="button" data-toggle="modal" data-target="#deleteWalletModal" data-id="{{ wallet.id }}" data-name="{{ wallet.name }}">
-                        <i class="fa fa-trash"></i>&nbsp;Delete
-                    </button>
-                </li>
-            </ul>
+                <ul class="list-group list-group-flush">
+                    <li class="list-group-item">
+                        <button type="button" class="btn btn-sm btn-primary btn-inline edit-btn" data-toggle="modal" data-target="#editWalletModal" data-id="{{ wallet.id }}" data-name="{{ wallet.name }}">
+                            <i class="fa fa-pencil"></i>&nbsp;Edit
+                        </button>
+                        <button class="btn btn-sm btn-danger btn-inline delete-btn" type="button" data-toggle="modal" data-target="#deleteWalletModal" data-id="{{ wallet.id }}" data-name="{{ wallet.name }}">
+                            <i class="fa fa-trash"></i>&nbsp;Delete
+                        </button>
+                    </li>
+                </ul>
 
-            <div class="card-footer">
-                Created: {{ wallet.created_time }}
+                <div class="card-footer">
+                    Created: {{ wallet.created_time }}
+                </div>
             </div>
         </div>
-    </div>
     {% endfor %}
-</div>
 {% else %}
     <div class="alert alert-info">
         <strong>Heads up!</strong> You haven't created any Wallets yet. Get started 
-        by clicking <a href="{% url 'new_wallet' %}">New Wallet</a>.
+        by clicking <span class="alert-link" style="cursor: pointer" data-toggle="modal" data-target="#createWalletModal">New Wallet</span>.
     </div>
 {% endif %}
+
 
 <script>
     $(document).ready(function() {
