@@ -85,7 +85,7 @@
                     <label for="editBudgetGoal">Goal: </label>
                     <div class="input-group">
                         <span class="input-group-addon">$</span>
-                        <input id="editBudgetGoal" type="number" class="form-control" step=0.01 value={{ budget.goal }} name="goal">
+                        <input id="editBudgetGoal" type="number" class="form-control" step=0.01 value={%  if budget %}{{ budget.goal }}{% else %}0{% endif %} name="goal">
                     </div>
                 </div>
 
@@ -130,7 +130,7 @@
                 <div class="modal-header">
                     <h5 clsas="modal-title">No Budgets Last Month</h5>
                 </div>
-                <div clas="modal-body">
+                <div class="modal-body">
                     <p>You do not have any budgets from the previous month. You'll have to create new budgets.</p>
                 </div>
                 <div class="modal-footer">

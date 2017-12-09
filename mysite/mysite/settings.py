@@ -85,6 +85,7 @@ TEMPLATES = [
 
 BOOTSTRAP_ADMIN_SIDEBAR_MENU = True
 
+LOGIN_URL = '/pynny/login'
 LOGIN_REDIRECT_URL = '/pynny/'
 
 WSGI_APPLICATION = 'mysite.wsgi.application'

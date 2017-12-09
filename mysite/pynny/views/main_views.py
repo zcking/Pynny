@@ -6,7 +6,7 @@ Author: Zachary King
 Implements the main site views (endpoint handlers) for the Pynny web app.
 """
 
-from django.shortcuts import render, reverse, redirect
+from django.shortcuts import render
 from django.contrib.auth import logout, authenticate, get_user_model
 from django.contrib.auth.decorators import login_required
 
