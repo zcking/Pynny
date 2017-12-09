@@ -1,14 +1,15 @@
 #!/usr/bin/env python3
-'''
+"""
 File: category_views.py
 Author: Zachary King
 
 Implements the views/handlers for BudgetCategory-related requests
-'''
+"""
 
 import logging
-from django.shortcuts import redirect, render, reverse
-from django.contrib.auth.decorators import login_required
+from django.shortcuts import render
+from django.contrib.auth.mixins import LoginRequiredMixin
+from django.views import View
 from datetime import date
 
 from ..models import BudgetCategory, Budget, Transaction
@@ -17,104 +18,109 @@ from ..models import BudgetCategory, Budget, Transaction
 logger = logging.getLogger('category_views')
 
 
-@login_required(login_url='/pynny/login')
-def budget_categories(request):
-    """View BudgetCategories for a user"""
+class CategoriesView(LoginRequiredMixin, View):
+    current_tab = 'categories'
 
-    # GET = display user's categories
-    if request.method == 'GET':
-        data = {}
+    @staticmethod
+    def get(request):
+        """Display all the user's Categories"""
+        context = dict()
+        context['categories'] = BudgetCategory.objects.filter(user=request.user)
+        context['current_tab'] = CategoriesView.current_tab
+        return render(request, 'pynny/categories/categories.html', context=context)
 
-        # Get the wallets for this user
-        data['categories'] = BudgetCategory.objects.filter(user=request.user)
+    @staticmethod
+    def post(request):
+        """Parse form data and create a new category"""
+        context = {'current_tab': CategoriesView.current_tab}
+        name = request.POST.get('name', None)
+        is_income = 'is_income' in request.POST
 
-        data['current_tab'] = 'categories'
-        return render(request, 'pynny/categories/categories.html', context=data)
-    # POST = create a new BudgetCategory
-    elif request.method == 'POST':
-        # Get the form data from the request
-        name = request.POST['name']
-        is_income = False
-        if 'is_income' in request.POST:
-            is_income = True
+        if CategoriesView.form_is_valid(name):
+            # Category names should be unique
+            if BudgetCategory.objects.filter(user=request.user, name=name):
+                context['alerts'] = {'errors': ['A category already exists with that name.']}
+                return render(request, 'pynny/categories/categories.html', context=context, status=409)
+            else:
+                # Create and save the new BudgetCategory
+                BudgetCategory(name=name, is_income=is_income, user=request.user).save()
+                context['alerts'] = {'success': ['{0} category created successfully!'.format(name)]}
+                return render(request, 'pynny/categories/categories.html', context=context, status=201)
+        else:
+            # Form is invalid
+            context['alerts'] = {'errors': ['Invalid input. Please provide a name for your category.']}
 
-        # Check if the category name exists already
-        if BudgetCategory.objects.filter(user=request.user, name=name):
-            data = {'alerts': {'errors': ['<strong>Oops!</strong> A category already exists with that name']}}
-            data['current_tab'] = 'categories'
-            return render(request, 'pynny/categories/new_category.html', context=data, status=409)
-
-        # Create the new BudgetCategory
-        BudgetCategory(name=name, is_income=is_income, user=request.user).save()
-        data = {'alerts': {'success': ['<strong>Done!</strong> New Category created successfully!']}}
-        data['current_tab'] = 'categories'
-        data['categories'] = BudgetCategory.objects.filter(user=request.user)
-        return render(request, 'pynny/categories/categories.html', context=data, status=201)
-
-
-@login_required(login_url='/pynny/login')
-def new_category(request):
-    '''Create a new BudgetCategory form'''
-    data = dict()
-    data['current_tab'] = 'categories'
-    return render(request, 'pynny/categories/new_category.html', context=data)
+    @staticmethod
+    def form_is_valid(category_name):
+        return category_name is None
 
 
-@login_required(login_url='/pynny/login')
-def one_category(request, category_id):
-    '''View a specific BudgetCategory'''
-    data = {}
-    data['current_tab'] = 'categories'
+class SingleCategoryView(LoginRequiredMixin, View):
+    current_tab = 'categories'
 
-    # Check if the category is owned by the logged in user
-    try:
-        category = BudgetCategory.objects.get(id=category_id)
-    except BudgetCategory.DoesNotExist:
-        # DNE
-        data['categories'] = BudgetCategory.objects.filter(user=request.user)
-        data['alerts'] = {'errors': ['<strong>Oh snap!</strong> That Category does not exist.']}
-        return render(request, 'pynny/categories/categories.html', context=data, status=404)
+    @staticmethod
+    def pre_process(request, category_id):
+        context = {'current_tab': SingleCategoryView.current_tab}
 
-    if category.user != request.user:
-        data['categories'] = BudgetCategory.objects.filter(user=request.user)
-        data['alerts'] = {'errors': ['<strong>Oh snap!</strong> That Category does not exist.']}
-        return render(request, 'pynny/categories/categories.html', context=data, status=403)
+        # Check if the category is owned by the logged in user
+        try:
+            category = BudgetCategory.objects.get(id=category_id)
+        except BudgetCategory.DoesNotExist:
+            context['categories'] = BudgetCategory.objects.filter(user=request.user)
+            context['alerts'] = {'errors': ['That category does not exist.']}
+            return False, render(request, 'pynny/categories/categories.html', context=context, status=401)
 
-    if request.method == "POST":
+        if category.user != request.user:
+            context['categories'] = BudgetCategory.objects.filter(user=request.user)
+            context['alerts'] = {'errors': ['That category does not exist.']}
+            return False, render(request, 'pynny/categories/categories.html', context=context, status=403)
+
+        return True, category
+
+    @staticmethod
+    def get(request, category_id):
+        context = {'current_tab': SingleCategoryView.current_tab}
+        success, resp = SingleCategoryView.pre_process(request, category_id)
+        if not success:
+            return resp
+
+        # Show the specific Category data
+        context['category'] = resp
+        context['budgets'] = Budget.objects.filter(category=resp, month__contains=date.strftime(date.today(), '%Y-%m'))
+        context['transactions'] = Transaction.objects.filter(category=resp).order_by('-created_time')
+        return render(request, 'pynny/categories/one_category.html', context=context)
+
+    @staticmethod
+    def post(request, category_id):
+        context = {'current_tab': SingleCategoryView.current_tab}
+        success, resp = SingleCategoryView.pre_process(request, category_id)
+        if not success:
+            return resp
+
+        category = resp
+
         # What kind of action?
-        action = request.POST['action'].lower()
+        action = request.POST.get('action', '').lower()
 
         if action == 'delete':
             # Delete the Category
             category.delete()
 
             # And return them to the categories page
-            data['categories'] = BudgetCategory.objects.filter(user=request.user)
-            data['alerts'] = {'info': ['<strong>Done!</strong> Your <em>' + category.name + '</em> Category was deleted successfully']}
-            return render(request, 'pynny/categories/categories.html', context=data)
-        elif action == 'edit':
-            # Render the edit_category view
-            data['category'] = category
-            return render(request, 'pynny/categories/edit_category.html', context=data)
+            context['categories'] = BudgetCategory.objects.filter(user=request.user)
+            context['alerts'] = {'info': ['Your <em>' + category.name + '</em> Category was deleted successfully']}
+            return render(request, 'pynny/categories/categories.html', context=context)
         elif action == 'edit_complete':
-            # Get the form data from the request
-            logger.info('Editing completed')
-            _name = request.POST['name']
-            _is_income = False
-            if 'is_income' in request.POST:
-                _is_income = True
+            # Get the form data from the request and update the category
+            _name = request.POST.get('name', None)
+            _is_income =  'is_income' in request.POST
 
             # Edit the Category
-            category.name = _name
+            if _name is not None:
+                category.name = _name
             category.is_income = _is_income
             category.save()
 
-            data = {'alerts': {'success': ['<strong>Done!</strong> Category updated successfully!']}}
-            data['categories'] = BudgetCategory.objects.filter(user=request.user)
-            return render(request, 'pynny/categories/categories.html', context=data)
-    elif request.method == 'GET':
-        # Show the specific Category data
-        data['category'] = category
-        data['budgets'] = Budget.objects.filter(category=category, month__contains=date.strftime(date.today(), '%Y-%m'))
-        data['transactions'] = Transaction.objects.filter(category=category).order_by('-created_time')
-        return render(request, 'pynny/categories/one_category.html', context=data)
+            context['alerts'] = {'success': ['Category updated successfully!']}
+            context['categories'] = BudgetCategory.objects.filter(user=request.user)
+            return render(request, 'pynny/categories/categories.html', context=context)
