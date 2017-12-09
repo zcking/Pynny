@@ -40,19 +40,23 @@ class CategoriesView(LoginRequiredMixin, View):
             # Category names should be unique
             if BudgetCategory.objects.filter(user=request.user, name=name):
                 context['alerts'] = {'errors': ['A category already exists with that name.']}
+                context['categories'] = BudgetCategory.objects.filter(user=request.user)
                 return render(request, 'pynny/categories/categories.html', context=context, status=409)
             else:
                 # Create and save the new BudgetCategory
                 BudgetCategory(name=name, is_income=is_income, user=request.user).save()
                 context['alerts'] = {'success': ['{0} category created successfully!'.format(name)]}
+                context['categories'] = BudgetCategory.objects.filter(user=request.user)
                 return render(request, 'pynny/categories/categories.html', context=context, status=201)
         else:
             # Form is invalid
             context['alerts'] = {'errors': ['Invalid input. Please provide a name for your category.']}
+            context['categories'] = BudgetCategory.objects.filter(user=request.user)
+            return render(request, 'pynny/categories/categories.html', context=context, status=400)
 
     @staticmethod
     def form_is_valid(category_name):
-        return category_name is None
+        return category_name is not None
 
 
 class SingleCategoryView(LoginRequiredMixin, View):
