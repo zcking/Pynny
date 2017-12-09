@@ -8,18 +8,15 @@ Implements the views/handlers for Budget-related requests
 
 from django.views import View
 from django.shortcuts import render
-from django.contrib.auth.decorators import login_required
 from django.contrib.auth.mixins import LoginRequiredMixin
-from django.utils.decorators import method_decorator
-import decimal
 from datetime import date
+import decimal
 
 from ..models import Budget, BudgetCategory, Wallet, Transaction
 
 
 class RenewBudgetView(LoginRequiredMixin, View):
-    @staticmethod
-    def get(request):
+    def get(self, request):
         renewed = set()
         today = date.today()
         last_month = date(today.year, today.month - 1 if today.month > 1 else 12, today.day)
@@ -32,16 +29,18 @@ class RenewBudgetView(LoginRequiredMixin, View):
                 renewed_budget.month = date.today()
                 renewed_budget.balance = decimal.Decimal('0')
                 renewed_budget.save()
-                renewed.add(budget.budget_id)
-            return budgets(request)
+                renewed.add(budget.buddet_id)
+            return BudgetsView.as_view()(request)
 
 
 class BudgetsView(LoginRequiredMixin, View):
+    current_tab = 'budgets'
+
     @staticmethod
     def get(request):
         """Get a User's Budgets"""
         data = dict()
-        data['current_tab'] = 'budgets'
+        data['current_tab'] = BudgetsView.current_tab
 
         # Get the wallets for this user
         data['budgets'] = Budget.objects.filter(user=request.user, month__contains=date.strftime(date.today(), '%Y-%m'))
@@ -81,7 +80,7 @@ class BudgetsView(LoginRequiredMixin, View):
                                                                month__contains=date.strftime(last_month, '%Y-%m'))
             data['budgets'] = Budget.objects.filter(user=request.user,
                                                     month__contains=date.strftime(date.today(), '%Y-%m'))
-            data['current_tab'] = 'budgets'
+            data['current_tab'] = BudgetsView.current_tab
             return render(request, 'pynny/budgets/new_budget.html', context=data)
 
         # Create the new Budget
@@ -101,11 +100,13 @@ class BudgetsView(LoginRequiredMixin, View):
                                                            month__contains=date.strftime(last_month, '%Y-%m'))
         data['categories'] = BudgetCategory.objects.filter(user=request.user)
         data['wallets'] = Wallet.objects.filter(user=request.user)
-        data['current_tab'] = 'budgets'
+        data['current_tab'] = BudgetsView.current_tab
         return render(request, 'pynny/budgets/budgets.html', context=data, status=201)
 
 
 class SingleBudgetView(LoginRequiredMixin, View):
+    current_tab = 'budgets'
+
     @staticmethod
     def pre_process(request, budget_id):
         # Check if the budget is owned by the logged in user
@@ -115,29 +116,29 @@ class SingleBudgetView(LoginRequiredMixin, View):
         except Budget.DoesNotExist:
             # DNE
             context['budgets'] = Budget.objects.filter(user=request.user,
-                                                    month__contains=date.strftime(date.today(), '%Y-%m'))
+                                                       month__contains=date.strftime(date.today(), '%Y-%m'))
             context['categories'] = BudgetCategory.objects.filter(user=request.user)
             today = date.today()
             last_month = date(today.year, today.month - 1 if today.month > 1 else 12, today.day)
             context['last_month_budgets'] = Budget.objects.filter(user=request.user,
-                                                               month__contains=date.strftime(last_month, '%Y-%m'))
+                                                                  month__contains=date.strftime(last_month, '%Y-%m'))
             context['wallets'] = Wallet.objects.filter(user=request.user)
             context['alerts'] = {'errors': ['<strong>Oh snap!</strong> That Budget does not exist.']}
-            context['current_tab'] = 'budgets'
+            context['current_tab'] = SingleBudgetView.current_tab
             return False, render(request, 'pynny/budgets/budgets.html', context=context, status=404)
 
         if budget.user != request.user:
             context['budgets'] = Budget.objects.filter(user=request.user,
-                                                    month__contains=date.strftime(date.today(), '%Y-%m'))
+                                                       month__contains=date.strftime(date.today(), '%Y-%m'))
             today = date.today()
             last_month = date(today.year, today.month - 1 if today.month > 1 else 12, today.day)
             context['last_month_budgets'] = Budget.objects.filter(user=request.user,
-                                                               month__contains=date.strftime(last_month, '%Y-%m'))
+                                                                  month__contains=date.strftime(last_month, '%Y-%m'))
             context['categories'] = BudgetCategory.objects.filter(user=request.user)
             context['wallets'] = Wallet.objects.filter(user=request.user)
             context['alerts'] = {
                 'errors': ['<strong>Oh snap!</strong> That Budget isn\'t yours! You don\'t have permission to view it']}
-            context['current_tab'] = 'budgets'
+            context['current_tab'] = SingleBudgetView.current_tab
             return False, render(request, 'pynny/budgets/budgets.html', context=context, status=403)
 
     @staticmethod
@@ -153,11 +154,11 @@ class SingleBudgetView(LoginRequiredMixin, View):
         today = date.today()
         last_month = date(today.year, today.month - 1 if today.month > 1 else 12, today.day)
         context['last_month_budgets'] = Budget.objects.filter(user=request.user,
-                                                           month__contains=date.strftime(last_month, '%Y-%m'))
+                                                              month__contains=date.strftime(last_month, '%Y-%m'))
         context['categories'] = BudgetCategory.objects.filter(user=request.user)
         context['wallets'] = Wallet.objects.filter(user=request.user)
         context['transactions'] = Transaction.objects.filter(category=budget.category).order_by('-created_time')
-        context['current_tab'] = 'budgets'
+        context['current_tab'] = SingleBudgetView.current_tab
         return render(request, 'pynny/budgets/one_budget.html', context=context)
 
     @staticmethod
@@ -168,6 +169,7 @@ class SingleBudgetView(LoginRequiredMixin, View):
 
         budget = Budget.objects.get(id=budget_id)
         context = dict()
+        context['current_tab'] = SingleBudgetView.current_tab
 
         # What kind of action is being performed on the budget?
         action = request.POST['action'].lower()
@@ -178,15 +180,14 @@ class SingleBudgetView(LoginRequiredMixin, View):
 
             # And return them to the budgets page
             context['budgets'] = Budget.objects.filter(user=request.user,
-                                                    month__contains=date.strftime(date.today(), '%Y-%m'))
+                                                       month__contains=date.strftime(date.today(), '%Y-%m'))
             context['categories'] = BudgetCategory.objects.filter(user=request.user)
             today = date.today()
             last_month = date(today.year, today.month - 1 if today.month > 1 else 12, today.day)
             context['last_month_budgets'] = Budget.objects.filter(user=request.user,
-                                                               month__contains=date.strftime(last_month, '%Y-%m'))
+                                                                  month__contains=date.strftime(last_month, '%Y-%m'))
             context['wallets'] = Wallet.objects.filter(user=request.user)
             context['alerts'] = {'success': ['<strong>Done!</strong> Budget was deleted successfully']}
-            context['current_tab'] = 'budgets'
             return render(request, 'pynny/budgets/budgets.html', context=context)
         elif action == 'edit':
             # Render the edit_budget view
@@ -194,10 +195,9 @@ class SingleBudgetView(LoginRequiredMixin, View):
             today = date.today()
             last_month = date(today.year, today.month - 1 if today.month > 1 else 12, today.day)
             context['last_month_budgets'] = Budget.objects.filter(user=request.user,
-                                                               month__contains=date.strftime(last_month, '%Y-%m'))
+                                                                  month__contains=date.strftime(last_month, '%Y-%m'))
             context['categories'] = BudgetCategory.objects.filter(user=request.user)
             context['wallets'] = Wallet.objects.filter(user=request.user)
-            context['current_tab'] = 'budgets'
             return render(request, 'pynny/budgets/edit_budget.html', context=context)
         elif action == 'edit_complete':
             # Get the form data from the request
@@ -214,15 +214,14 @@ class SingleBudgetView(LoginRequiredMixin, View):
             budget.goal = _goal
             budget.save()
 
-            context = {'alerts': {'success': ['<strong>Done!</strong> Budget updated successfully!']}}
+            context['alerts'] = {'success': ['<strong>Done!</strong> Budget updated successfully!']}
             today = date.today()
             last_month = date(today.year, today.month - 1 if today.month > 1 else 12, today.day)
             context['last_month_budgets'] = Budget.objects.filter(user=request.user,
-                                                               month__contains=date.strftime(last_month, '%Y-%m'))
+                                                                  month__contains=date.strftime(last_month, '%Y-%m'))
             context['categories'] = BudgetCategory.objects.filter(user=request.user)
             context['wallets'] = Wallet.objects.filter(user=request.user)
             context['budgets'] = Budget.objects.filter(user=request.user,
-                                                    month__contains=date.strftime(date.today(), '%Y-%m'))
-            context['current_tab'] = 'budgets'
+                                                       month__contains=date.strftime(date.today(), '%Y-%m'))
             return render(request, 'pynny/budgets/budgets.html', context=context)
 
