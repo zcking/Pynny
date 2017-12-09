@@ -112,22 +112,22 @@
                         {% if alerts %}
                             {% if alerts.success %}
                                 {% for alert in alerts.success %}
-                                    <div class="alert alert-success">{% autoescape off %}{{ alert }}{% endautoescape %}</div>
+                                    <div class="alert alert-success"><strong>Done!</strong>&nbsp;{% autoescape off %}{{ alert }}{% endautoescape %}</div>
                                 {% endfor %}
                             {% endif %}
                             {% if alerts.info %}
                                 {% for alert in alerts.info %}
-                                    <div class="alert alert-info">{% autoescape off %}{{ alert }}{% endautoescape %}</div>
+                                    <div class="alert alert-info"><strong>Heads Up!</strong>&nbsp;{% autoescape off %}{{ alert }}{% endautoescape %}</div>
                                 {% endfor %}
                             {% endif %}
                             {% if alerts.warnings %}
                                 {% for alert in alerts.warnings %}
-                                    <div class="alert alert-warning">{% autoescape off %}{{ alert }}{% endautoescape %}</div>
+                                    <div class="alert alert-warning"><strong>Caution!</strong>&nbsp;{% autoescape off %}{{ alert }}{% endautoescape %}</div>
                                 {% endfor %}
                             {% endif %}
                             {% if alerts.errors %}
                                 {% for alert in alerts.errors %}
-                                    <div class="alert alert-danger">{% autoescape off %}{{ alert }}{% endautoescape %}</div>
+                                    <div class="alert alert-danger"><strong>Yikes!</strong>&nbsp;{% autoescape off %}{{ alert }}{% endautoescape %}</div>
                                 {% endfor %}
                             {% endif %}
                         {% endif %}
