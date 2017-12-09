@@ -28,8 +28,8 @@ urlpatterns = [
     url(r'^transactions/$', transaction_views.transactions, name='transactions'),  # /transactions/
     url(r'^transactions/(?P<transaction_id>[0-9]+)$', transaction_views.one_transaction, name='one_transaction'),
     url(r'^budgets/renew/$', budget_views.RenewBudgetView.as_view(), name='renew_budgets'),  # /budgets/renew
-    url(r'^savings/$', savings_views.savings, name='savings'),  # /savings/
-    url(r'^savings/(?P<savings_id>[0-9]+)$', savings_views.one_saving, name='one_saving'),  # /savings/5
+    url(r'^savings/$', savings_views.SavingsView.as_view(), name='savings'),  # /savings/
+    url(r'^savings/(?P<savings_id>[0-9]+)$', savings_views.SingleSavingView.as_view(), name='one_saving'),  # /savings/5
     url(r'^notifications/dismiss/$', notification_views.dismiss_notice, name='dismiss_notice'),
     url(r'^settings/$', main_views.settings_view, name='settings'),  # /settings/
 ]
