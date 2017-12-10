@@ -168,11 +168,19 @@
         <p>Amount: 
             <span class="text-{% transaction_class transaction %}">${{ transaction.amount }}</span>
         </p>
-        <p>Category: 
-            <a href="{% url 'one_category' category_id=transaction.category.id %}" class="text-{% category_class transaction.category.is_income %}">
-                {{ transaction.category.name }}
-            </a>
-        </p>
+        {% if transaction.category %}
+            <p>Category:
+                <a href="{% url 'one_category' category_id=transaction.category.id %}" class="text-{% category_class transaction.category.is_income %}">
+                    {{ transaction.category.name }}
+                </a>
+            </p>
+        {% elif transaction.saving %}
+            <p>Saving:
+                <a href="{% url 'one_saving' savings_id=transaction.saving.id %}" class="text-{% saving_class transaction.saving %}">
+                    {{ transaction.saving.name }}
+                </a>
+            </p>
+        {% endif %}
         <p>Wallet: 
             <a href="{% url 'one_wallet' wallet_id=transaction.wallet.id %}" class="text-{% wallet_class transaction.wallet.balance %}">
                 <span class="text-{% wallet_class transaction.wallet.balance %}">
