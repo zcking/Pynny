@@ -1,75 +1,128 @@
 #!/usr/bin/env python3
-'''
+"""
 File: transaction_views.py
 Author: Zachary King
 
-Implements the views/handlers for Transaction-related requetss
-'''
+Implements the views/handlers for Transaction-related requests
+"""
 
 from datetime import date, datetime
-from django.shortcuts import render, redirect, reverse
-from django.contrib.auth.decorators import login_required
+from django.shortcuts import render
+from django.contrib.auth.mixins import LoginRequiredMixin
+from django.views import View
 import decimal
 
 from . import savings_views
 from ..models import Transaction, BudgetCategory, Wallet, Budget, Savings
 
 
-@login_required(login_url='/pynny/login')
-def transactions(request):
-    '''View transactions for a user'''
-    data = dict()
-    data['current_tab'] = 'transactions'
+class TransactionsView(LoginRequiredMixin, View):
+    current_tab = 'transactions'
 
-    if request.method == 'GET':
-        data['transactions'] = Transaction.objects.filter(user=request.user).order_by('-created_time')
-        data['categories'] = BudgetCategory.objects.filter(user=request.user)
-        data['wallets'] = Wallet.objects.filter(user=request.user)
-        data['default_date'] = date.strftime(date.today(), '%Y-%m-%d')
-        data['savings'] = Savings.objects.filter(user=request.user, completed=False)
-        return render(request, 'pynny/transactions/transactions.html', context=data)
-    # POST = create a new Transaction
-    elif request.method == 'POST':
-        # Get the form data from the request
+    @staticmethod
+    def get(request):
+        """Get the user's transactions"""
+        context = {
+            'current_tab': TransactionsView.current_tab,
+            'transactions': Transaction.objects.filter(user=request.user).order_by('-created_time'),
+            'categories': BudgetCategory.objects.filter(user=request.user),
+            'wallets': Wallet.objects.filter(user=request.user),
+            'default_date': date.strftime(date.today(), '%Y-%m-%d'),
+            'savings': Savings.objects.filter(user=request.user, completed=False)
+        }
+        return render(request, 'pynny/transactions/transactions.html', context=context)
+
+    @staticmethod
+    def fill_default_context(request, context):
+        if not context:
+            context = dict()
+        context['current_tab'] = TransactionsView.current_tab
+        context['transactions'] = Transaction.objects.filter(user=request.user).order_by('-created_time')
+        context['categories'] = BudgetCategory.objects.filter(user=request.user)
+        context['wallets'] = Wallet.objects.filter(user=request.user)
+        context['default_date'] = date.strftime(date.today(), '%Y-%m-%d')
+        context['savings'] = Savings.objects.filter(user=request.user, completed=False)
+        return context
+
+    @staticmethod
+    def form_is_valid(request):
+        context = {'current_tab': TransactionsView.current_tab}
         _category = request.POST.get('category', None)
         _saving = request.POST.get('saving', None)
 
         if _category is None and _saving is None:
-            data['alerts'] = {'errors': ['<strong>Oh Snap!</strong> Your transaction must either be categorized or put towards a saving']}
-            data['transactions'] = Transaction.objects.filter(user=request.user).order_by('-created_time')
-            data['categories'] = BudgetCategory.objects.filter(user=request.user)
-            data['wallets'] = Wallet.objects.filter(user=request.user)
-            data['default_date'] = date.strftime(date.today(), '%Y-%m-%d')
-            data['savings'] = Savings.objects.filter(user=request.user, completed=False)
-            return render(request, 'pynny/transactions/transactions.html', context=data)
+            context = TransactionsView.fill_default_context(request, context)
+            context['alerts'] = {'errors': ['Your transaction must either be categorized or put towards a saving.']}
+            return False, render(request, 'pynny/transactions/transactions.html', context=context)
 
         try:
-            _category = BudgetCategory.objects.get(id=_category) if _category != 'none' else None
+            _category = BudgetCategory.objects.get(id=_category) if _category.lower() != 'none' else None
         except BudgetCategory.DoesNotExist:
             pass
 
         try:
-            _saving = Savings.objects.get(id=_saving) if _saving != 'none' else None
+            _saving = Savings.objects.get(id=_saving) if _saving.lower() != 'none' else None
         except Savings.DoesNotExist:
             pass
 
-        _wallet = int(request.POST['wallet'])
-        _amount = float(request.POST['amount'])
-        _description = request.POST['description']
-        _created_time = request.POST['created_time'] # %Y-%m-%d date
+        _wallet = request.POST.get('wallet', 'N/A')
+        try:
+            _wallet = int(_wallet)
+        except ValueError:
+            context = TransactionsView.fill_default_context(request, context)
+            context['alerts'] = {'errors': ['Invalid wallet selected.']}
+            return False, render(request, 'pynny/transactions/transactions.html', context=context, status=400)
+
+        _amount = request.POST.get('amount', 'N/A')
+        try:
+            _amount = float(_amount)
+        except ValueError:
+            context = TransactionsView.fill_default_context(request, context)
+            context['alerts'] = {'errors': ['Invalid amount given for your transaction. Amount must be numeric.']}
+            return False, render(request, 'pynny/transactions/transactions.html', context=context, status=400)
+
+        _description = request.POST.get('description', '')
+        _created_time = request.POST.get('created_time', datetime.strftime(datetime.today(), '%Y-%m-%d'))
         _created_time = datetime.strptime(_created_time, '%Y-%m-%d').date()
 
-        wallet = Wallet.objects.get(id=_wallet)
+        try:
+            wallet = Wallet.objects.get(id=_wallet)
+        except Wallet.DoesNotExist:
+            context = TransactionsView.fill_default_context(request, context)
+            context['alerts'] = {'errors': ['Invalid wallet selected. That wallet does not exist.']}
+            return False, render(request, 'pynny/transactions/transactions.html', context=context, status=400)
+
+        if wallet.user != request.user:
+            context = TransactionsView.fill_default_context(request, context)
+            context['alerts'] = {'errors': ['Invalid wallet selected. That wallet does not exist.']}
+            return False, render(request, 'pynny/transactions/transactions.html', context=context, status=400)
 
         # Create the new Transaction
         if _saving is None:
-            Transaction(category=_category, wallet=wallet, amount=_amount, description=_description, created_time=_created_time, user=request.user).save()
+            return True, Transaction(category=_category, wallet=wallet, amount=_amount, description=_description,
+                                     created_time=_created_time, user=request.user)
         else:
-            Transaction(saving=_saving, wallet=wallet, amount=_amount, description=_description, created_time=_created_time, user=request.user).save()
+            return True, Transaction(saving=_saving, wallet=wallet, amount=_amount, description=_description,
+                                     created_time=_created_time, user=request.user)
+
+    @staticmethod
+    def post(request):
+        """Parse form-data and create a new transaction"""
+        context = {'current_tab': TransactionsView.current_tab}
+        success, resp = TransactionsView.form_is_valid(request)
+        if not success:
+            return resp
+
+        transaction = resp
+        transaction.save()
+        _saving = transaction.saving
+        _category = transaction.category
+        _amount = transaction.amount
+        wallet = transaction.wallet
 
         # Update the balance of appropriate budgets
-        amount = abs(_amount)
-        data['alerts'] = {'success': [], 'errors': []}
+        amount = abs(transaction.amount)
+        context['alerts'] = {'success': [], 'errors': []}
         if _saving is None:
             budgets = Budget.objects.filter(category=_category)
 
@@ -93,80 +146,67 @@ def transactions(request):
             _saving.save()
             if _saving.goal <= _saving.balance:
                 savings_views.complete_saving(_saving)
-                data['alerts']['success'].append('<strong>Congratulations!</strong> You met your Savings goal for "{}"'.format(_saving.name))
-                data['alerts']['success'].append('<strong>Done!</strong> Saving updated successfully')
 
         # Render the transactions
-        data['alerts']['success'].append('<strong>Done!</strong> New Transaction recorded successfully!')
-        data['transactions'] = Transaction.objects.filter(user=request.user).order_by('-created_time')
-        data['categories'] = BudgetCategory.objects.filter(user=request.user)
-        data['wallets'] = Wallet.objects.filter(user=request.user)
-        data['savings'] = Savings.objects.filter(user=request.user, completed=False)
-        return render(request, 'pynny/transactions/transactions.html', context=data, status=201)
+        context['alerts'] = {'success': ['New transaction recorded successfully!']}
+        context['transactions'] = Transaction.objects.filter(user=request.user).order_by('-created_time')
+        context['categories'] = BudgetCategory.objects.filter(user=request.user)
+        context['wallets'] = Wallet.objects.filter(user=request.user)
+        context['savings'] = Savings.objects.filter(user=request.user, completed=False)
+        return render(request, 'pynny/transactions/transactions.html', context=context, status=201)
 
 
-@login_required(login_url='/pynny/login')
-def new_transaction(request):
-    '''View for creating a new transaction'''
-    data = {}
-    data['current_tab'] = 'transactions'
-    data['categories'] = BudgetCategory.objects.filter(user=request.user)
-    data['wallets'] = Wallet.objects.filter(user=request.user)
+class SingleTransactionView(LoginRequiredMixin, View):
+    """Handles requests to single transaction resources"""
+    current_tab = 'transactions'
 
-    # Check if they have any categories or wallets first
-    if not data['categories']:
-        data = {
-            'alerts': {
-                'errors': [
-                    '<strong>Oy!</strong> You don\'t have any Categories yet! You need to create a Category before you can record a Transaction!'
-                ]
-            },
-        }
-        data['current_tab'] = 'categories'
-        return render(request, 'pynny/categories/new_category.html', context=data)
+    @staticmethod
+    def pre_process(request, transaction_id):
+        """Validate the transaction exists and is owned by the user"""
+        context = {'current_tab': SingleTransactionView.current_tab}
+        try:
+            transaction = Transaction.objects.get(id=transaction_id)
+        except Transaction.DoesNotExist:
+            # DNE
+            context['transactions'] = Transaction.objects.filter(user=request.user).order_by('-created_time')
+            context['savings'] = Savings.objects.filter(user=request.user, completed=False)
+            context['alerts'] = {'errors': ['That transaction does not exist.']}
+            return False, render(request, 'pynny/transactions/transactions.html', context=context, status=404)
 
-    if not data['wallets']:
-        data = {
-            'alerts': {
-                'errors': [
-                    '<strong>Oy!</strong> You don\'t have any Wallets yet! You need to create a Wallet before you can record a Transaction!'
-                ]
-            },
-        }
-        data['current_tab'] = 'wallets'
-        return render(request, 'pynny/wallets/new_wallet.html', context=data)
+        if transaction.user != request.user:
+            context['transactions'] = Transaction.objects.filter(user=request.user).order_by('-created_time')
+            context['alerts'] = {'errors': ['That transaction does not exist.']}
+            context['savings'] = Savings.objects.filter(user=request.user, completed=False)
+            return False, render(request, 'pynny/transactions/transactions.html', context=context, status=403)
 
-    # They have a wallet and category so continue
-    data['default_date'] = date.strftime(date.today(), '%Y-%m-%d')
-    data['savings'] = Savings.objects.filter(user=request.user, completed=False)
-    return render(request, 'pynny/transactions/new_transaction.html', context=data)
+        return True, transaction
 
+    @staticmethod
+    def get(request, transaction_id):
+        """Get the single transaction"""
+        context = {'current_tab': SingleTransactionView.current_tab}
+        success, resp = SingleTransactionView.pre_process(request, transaction_id)
+        if not success:
+            return resp
+        transaction = resp
 
-@login_required(login_url='/pynny/login')
-def one_transaction(request, transaction_id):
-    '''View for a single Transaction'''
-    data = {}
-    data['current_tab'] = 'transactions'
+        # Show the specific Transaction data
+        context['transaction'] = transaction
+        context['categories'] = BudgetCategory.objects.filter(user=request.user)
+        context['wallets'] = Wallet.objects.filter(user=request.user)
+        context['savings'] = Savings.objects.filter(user=request.user, completed=False)
+        return render(request, 'pynny/transactions/one_transaction.html', context=context)
 
-    # Check if transaction is owned by user
-    try:
-        transaction = Transaction.objects.get(id=transaction_id)
-    except Transaction.DoesNotExist:
-        # DNE
-        data['transactions'] = Transaction.objects.filter(user=request.user).order_by('-created_time')
-        data['savings'] = Savings.objects.filter(user=request.user, completed=False)
-        data['alerts'] = {'errors': ['<strong>Oh snap!</strong> That Transaction does not exist.']}
-        return render(request, 'pynny/transactions/transactions.html', context=data, status=404)
+    @staticmethod
+    def post(request, transaction_id):
+        """Parse form-data and update the transaction"""
+        context = {'current_tab': SingleTransactionView.current_tab}
+        success, resp = SingleTransactionView.pre_process(request, transaction_id)
+        if not success:
+            return resp
+        transaction = resp
 
-    if transaction.user != request.user:
-        data['transactions'] = Transaction.objects.filter(user=request.user).order_by('-created_time')
-        data['alerts'] = {'errors': ['<strong>Oh snap!</strong> That Transaction does not exist.']}
-        data['savings'] = Savings.objects.filter(user=request.user, completed=False)
-        return render(request, 'pynny/transactions/transactions.html', context=data, status=403)
-
-    if request.method == "POST":
-        # What kind of POST was this?
-        action = request.POST['action'].lower()
+        action = request.POST.get('action', '').lower()
         if action == 'delete':
             # Update the balance of appropriate budgets
             undo_transaction(transaction)
@@ -175,29 +215,129 @@ def one_transaction(request, transaction_id):
             transaction.delete()
 
             # And return them to the Transactions page
-            data['transactions'] = Transaction.objects.filter(user=request.user).order_by('-created_time')
-            data['categories'] = BudgetCategory.objects.filter(user=request.user)
-            data['wallets'] = Wallet.objects.filter(user=request.user)
-            data['alerts'] = {'info': ['<strong>Done!</strong> Transaction was deleted successfully']}
-            data['savings'] = Savings.objects.filter(user=request.user, completed=False)
-            return render(request, 'pynny/transactions/transactions.html', context=data)
-        elif action == 'edit':
-            # Render the edit_transaction view
-            data['transaction'] = transaction
-            data['categories'] = BudgetCategory.objects.filter(user=request.user)
-            data['wallets'] = Wallet.objects.filter(user=request.user)
-            data['savings'] = Savings.objects.filter(user=request.user, completed=False)
-            return render(request, 'pynny/transactions/edit_transaction.html', context=data)
+            context['transactions'] = Transaction.objects.filter(user=request.user).order_by('-created_time')
+            context['categories'] = BudgetCategory.objects.filter(user=request.user)
+            context['wallets'] = Wallet.objects.filter(user=request.user)
+            context['alerts'] = {'info': ['Transaction was deleted successfully']}
+            context['savings'] = Savings.objects.filter(user=request.user, completed=False)
+            return render(request, 'pynny/transactions/transactions.html', context=context)
         elif action == 'edit_complete':
             # Get the form data from the request
-            _category = int(request.POST['category'])
-            _wallet = int(request.POST['wallet'])
-            _amount = float(request.POST['amount'])
-            _description = request.POST['description']
-            _created_time = request.POST['created_time'] # %Y-%m-%d date
+            _category_id = request.POST.get('category', None)
+            _saving_id = request.POST.get('saving', None)
+
+            # Either a category or a saving must be linked to the transaction
+            if _category_id is None and _saving_id is None:
+                context['alerts'] = {'errors': ['You must select either a category or a saving for the transaction.']}
+                context['transactions'] = Transaction.objects.filter(user=request.user).order_by('-created_time')
+                context['categories'] = BudgetCategory.objects.filter(user=request.user)
+                context['wallets'] = Wallet.objects.filter(user=request.user)
+                context['savings'] = Savings.objects.filter(user=request.user, completed=False)
+                return render(request, 'pynny/transactions/transactions.html', context=context)
+
+            if _category_id is not None and _category_id != 'none':
+                try:
+                    _category_id = int(_category_id)
+                except (ValueError, TypeError):
+                    context['alerts'] = {'errors': ['Invalid category selected.']}
+                    context['transactions'] = Transaction.objects.filter(user=request.user).order_by('-created_time')
+                    context['categories'] = BudgetCategory.objects.filter(user=request.user)
+                    context['wallets'] = Wallet.objects.filter(user=request.user)
+                    context['savings'] = Savings.objects.filter(user=request.user, completed=False)
+                    return render(request, 'pynny/transactions/transactions.html', context=context)
+            if _saving_id is not None and _saving_id != 'none':
+                try:
+                    _saving_id = int(_saving_id)
+                except (ValueError, TypeError):
+                    context['alerts'] = {'errors': ['Invalid saving selected.']}
+                    context['transactions'] = Transaction.objects.filter(user=request.user).order_by(
+                        '-created_time')
+                    context['categories'] = BudgetCategory.objects.filter(user=request.user)
+                    context['wallets'] = Wallet.objects.filter(user=request.user)
+                    context['savings'] = Savings.objects.filter(user=request.user, completed=False)
+                    return render(request, 'pynny/transactions/transactions.html', context=context)
+
+            if _category_id == 'none' and _saving_id == 'none':
+                context['alerts'] = {'errors': ['You must attach your transaction to either a category or saving.']}
+                context['transactions'] = Transaction.objects.filter(user=request.user).order_by(
+                    '-created_time')
+                context['categories'] = BudgetCategory.objects.filter(user=request.user)
+                context['wallets'] = Wallet.objects.filter(user=request.user)
+                context['savings'] = Savings.objects.filter(user=request.user, completed=False)
+                return render(request, 'pynny/transactions/transactions.html', context=context)
+
+            _wallet_id = request.POST.get('wallet', None)
+            if _wallet_id is None or not str(_wallet_id).isdigit():
+                context['alerts'] = {'errors': ['You must specify a wallet for the transaction.']}
+                context['transactions'] = Transaction.objects.filter(user=request.user).order_by(
+                    '-created_time')
+                context['categories'] = BudgetCategory.objects.filter(user=request.user)
+                context['wallets'] = Wallet.objects.filter(user=request.user)
+                context['savings'] = Savings.objects.filter(user=request.user, completed=False)
+                return render(request, 'pynny/transactions/transactions.html', context=context)
+            else:
+                _wallet_id = int(request.POST['wallet'])
+
+            try:
+                _amount = float(request.POST.get('amount', '0.0'))
+            except ValueError:
+                context['alerts'] = {'errors': ['Invalid amount given. Amount must be numeric.']}
+                context['transactions'] = Transaction.objects.filter(user=request.user).order_by(
+                    '-created_time')
+                context['categories'] = BudgetCategory.objects.filter(user=request.user)
+                context['wallets'] = Wallet.objects.filter(user=request.user)
+                context['savings'] = Savings.objects.filter(user=request.user, completed=False)
+                return render(request, 'pynny/transactions/transactions.html', context=context)
+
+            _description = request.POST.get('description', '')
+            _created_time = request.POST.get('created_time', datetime.strftime(datetime.today(), '%Y-%m-%d'))
             _created_time = datetime.strptime(_created_time, '%Y-%m-%d').date()
 
-            new_category = BudgetCategory.objects.get(id=_category)
+            if _category_id is not None and _category_id != 'none':
+                try:
+                    new_category = BudgetCategory.objects.get(id=_category_id) if _category_id is not None else None
+                except BudgetCategory.DoesNotExist:
+                    context['alerts'] = {'errors': ['Invalid category selected. That category does not exist.']}
+                    context['transactions'] = Transaction.objects.filter(user=request.user).order_by(
+                        '-created_time')
+                    context['categories'] = BudgetCategory.objects.filter(user=request.user)
+                    context['wallets'] = Wallet.objects.filter(user=request.user)
+                    context['savings'] = Savings.objects.filter(user=request.user, completed=False)
+                    return render(request, 'pynny/transactions/transactions.html', context=context, status=400)
+
+                if new_category.user != request.user:
+                    context['alerts'] = {'errors': ['Invalid category selected. That category does not exist.']}
+                    context['transactions'] = Transaction.objects.filter(user=request.user).order_by(
+                        '-created_time')
+                    context['categories'] = BudgetCategory.objects.filter(user=request.user)
+                    context['wallets'] = Wallet.objects.filter(user=request.user)
+                    context['savings'] = Savings.objects.filter(user=request.user, completed=False)
+                    return render(request, 'pynny/transactions/transactions.html', context=context, status=400)
+            else:
+                new_category = None
+
+            if _saving_id is not None and _saving_id != 'none':
+                try:
+                    new_saving = Savings.objects.get(id=_saving_id) if _saving_id is not None else None
+                except Savings.DoesNotExist:
+                    context['alerts'] = {'errors': ['Invalid saving selected. That saving does not exist.']}
+                    context['transactions'] = Transaction.objects.filter(user=request.user).order_by(
+                        '-created_time')
+                    context['categories'] = BudgetCategory.objects.filter(user=request.user)
+                    context['wallets'] = Wallet.objects.filter(user=request.user)
+                    context['savings'] = Savings.objects.filter(user=request.user, completed=False)
+                    return render(request, 'pynny/transactions/transactions.html', context=context, status=400)
+
+                if new_saving.user != request.user:
+                    context['alerts'] = {'errors': ['Invalid saving selected. That saving does not exist.']}
+                    context['transactions'] = Transaction.objects.filter(user=request.user).order_by(
+                        '-created_time')
+                    context['categories'] = BudgetCategory.objects.filter(user=request.user)
+                    context['wallets'] = Wallet.objects.filter(user=request.user)
+                    context['savings'] = Savings.objects.filter(user=request.user, completed=False)
+                    return render(request, 'pynny/transactions/transactions.html', context=context)
+            else:
+                new_saving = None
 
             # Undo the last version of the transaction
             # print('balance before undo: ' + str(transaction.wallet.balance))
@@ -213,36 +353,53 @@ def one_transaction(request, transaction_id):
                 budget.save()
 
             # Update the wallet balance
-            new_wallet = Wallet.objects.get(id=_wallet)
-            # print('balance before update: ' + str(new_wallet.balance))
-            if new_category.is_income:
-                new_wallet.balance += decimal.Decimal(_amount)
-            else:
+            try:
+                new_wallet = Wallet.objects.get(id=_wallet_id)
+            except Wallet.DoesNotExist:
+                context['alerts'] = {'errors': ['Invalid wallet selected. That wallet does not exist.']}
+                context['transactions'] = Transaction.objects.filter(user=request.user).order_by(
+                    '-created_time')
+                context['categories'] = BudgetCategory.objects.filter(user=request.user)
+                context['wallets'] = Wallet.objects.filter(user=request.user)
+                context['savings'] = Savings.objects.filter(user=request.user, completed=False)
+                return render(request, 'pynny/transactions/transactions.html', context=context, status=400)
+
+            if new_wallet.user != request.user:
+                context['alerts'] = {'errors': ['Invalid wallet selected. That wallet does not exist.']}
+                context['transactions'] = Transaction.objects.filter(user=request.user).order_by(
+                    '-created_time')
+                context['categories'] = BudgetCategory.objects.filter(user=request.user)
+                context['wallets'] = Wallet.objects.filter(user=request.user)
+                context['savings'] = Savings.objects.filter(user=request.user, completed=False)
+                return render(request, 'pynny/transactions/transactions.html', context=context, status=400)
+
+            if new_category is not None:
+                if new_category.is_income:
+                    new_wallet.balance += decimal.Decimal(_amount)
+                else:
+                    new_wallet.balance -= decimal.Decimal(_amount)
+                new_wallet.save()
+            elif new_saving is not None:
                 new_wallet.balance -= decimal.Decimal(_amount)
-            new_wallet.save()
-            # print('balance after update: ' + str(new_wallet.balance))
+                new_saving.balance += decimal.Decimal(_amount)
+                new_wallet.save()
+                new_saving.save()
 
             # And update the transaction itself
-            transaction.category = new_category
+            transaction.category = new_category if new_category is not None else None
+            transaction.saving = new_saving if new_saving is not None else None
             transaction.wallet = new_wallet
             transaction.amount = _amount
             transaction.description = _description
             transaction.created_time = _created_time
             transaction.save()
 
-            data['alerts'] = {'success': ['<strong>Done!</strong> Transaction updated successfully!']}
-            data['transactions'] = Transaction.objects.filter(user=request.user).order_by('-created_time')
-            data['categories'] = BudgetCategory.objects.filter(user=request.user)
-            data['wallets'] = Wallet.objects.filter(user=request.user)
-            data['savings'] = Savings.objects.filter(user=request.user, completed=False)
-            return render(request, 'pynny/transactions/transactions.html', context=data)
-    elif request.method == 'GET':
-        # Show the specific Transaction data
-        data['transaction'] = transaction
-        data['categories'] = BudgetCategory.objects.filter(user=request.user)
-        data['wallets'] = Wallet.objects.filter(user=request.user)
-        data['savings'] = Savings.objects.filter(user=request.user, completed=False)
-        return render(request, 'pynny/transactions/one_transaction.html', context=data)
+            context['alerts'] = {'success': ['Transaction updated successfully!']}
+            context['transactions'] = Transaction.objects.filter(user=request.user).order_by('-created_time')
+            context['categories'] = BudgetCategory.objects.filter(user=request.user)
+            context['wallets'] = Wallet.objects.filter(user=request.user)
+            context['savings'] = Savings.objects.filter(user=request.user, completed=False)
+            return render(request, 'pynny/transactions/transactions.html', context=context)
 
 
 def undo_transaction(trans):

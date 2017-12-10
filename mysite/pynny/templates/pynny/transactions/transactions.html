@@ -22,6 +22,7 @@
                         <label for="inputTransactionCategory">Category: </label>
                         <div class="input-group">
                             <select id="inputTransactionCategory" name="category" class="form-control">
+                                <option id="inputCategoryDefault" class="text-muted" value="none">N/A</option>
                                 {% for category in categories %}
                                     <option class="text-{% category_class category.is_income %}" value="{{ category.id }}">{{ category.name }}</option>
                                 {% endfor %}
@@ -92,6 +93,7 @@
                         <label for="editTransactionCategory">Category: </label>
                         <div class="input-group">
                             <select id="editTransactionCategory" name="category" class="form-control">
+                                <option id="editCategoryDefault" class="text-muted" value="none">N/A</option>
                                 {% for category in categories %}
                                     <option id="optionCategory{{ category.id }}" class="text-{% category_class category.is_income %}" value="{{ category.id }}">{{ category.name }}</option>
                                 {% endfor %}
@@ -223,7 +225,7 @@
                         <a class="btn-link" href="{% url 'one_transaction' transaction_id=transaction.id %}">
                             <button class="btn btn-sm" type="button"><i class="fa fa-lg fa-search-plus"></i></button>
                         </a>
-                        <button type="button" class="btn btn-sm btn-primary btn-inline" data-toggle="modal" data-target="#editTransactionModal" data-id="{{ transaction.id }}" data-wallet="{{ transaction.wallet.id }}" data-category="{{ transaction.category.id }}" data-amount="{{ transaction.amount }}" data-description="{{ transaction.description }}" data-date="{% fmt_time transaction.created_time %}" data-saving="{% if transaction.saving %}{{ transaction.saving.id }}{% endif %}">
+                        <button type="button" class="btn btn-sm btn-primary btn-inline" data-toggle="modal" data-target="#editTransactionModal" data-id="{{ transaction.id }}" data-wallet="{{ transaction.wallet.id }}" data-category="{% if transaction.category %}{{ transaction.category.id }}{% else %}none{% endif %}" data-amount="{{ transaction.amount }}" data-description="{{ transaction.description }}" data-date="{% fmt_time transaction.created_time %}" data-saving="{% if transaction.saving %}{{ transaction.saving.id }}{% endif %}">
                             <i class="fa fa-lg fa-pencil"></i>
                         </button>
                         <button type="button" class="btn btn-sm btn-danger btn-inline" data-toggle="modal" data-target="#deleteTransactionModal" data-id="{{ transaction.id }}">
@@ -252,17 +254,47 @@
 
         $('#inputTransactionSaving').change(function() {
             var selected = $('#inputTransactionSaving option:selected')[0].value;
-            $('#inputTransactionCategoryWrapper').toggle(selected === "none");
+            if (selected !== "none") {
+                $('#inputTransactionCategory').find('option').each(function() {
+                    $(this).prop('selected', false);
+                });
+                $(this).find('#inputCategoryDefault').prop('selected', true);
+            }
+        });
+
+        $('#inputTransactionCategory').change(function() {
+            var selected = $('#inputTransactionCategory option:selected')[0].value;
+            if (selected !== "none") {
+                $('#inputTransactionSaving').find('option').each(function() {
+                    $(this).prop('selected', false);
+                });
+                $(this).find('#inputSavingDefault').prop('selected', true);
+            }
         });
 
         $('#editTransactionSaving').change(function() {
             var selected = $('#editTransactionSaving option:selected')[0].value;
-            $('#editTransactionCategoryWrapper').toggle(selected === "none");
+            if (selected !== "none") {
+                $('#editTransactionCategory').find('option').each(function() {
+                    $(this).prop('selected', false);
+                });
+                $(this).find('#editCategoryDefault').prop('selected', true);
+            }
+        });
+
+        $('#editTransactionCategory').change(function () {
+            var selected = $('#editTransactionCategory option:selected')[0].value;
+            if (selected !== "none") {
+                $('#editTransactionSaving').find('option').each(function() {
+                    $(this).prop('selected', false);
+                });
+                $(this).find('#editSavingDefault').prop('selected', true);
+            }
         });
 
         $('#editTransactionModal').on('show.bs.modal', function(event) {
             var button = $(event.relatedTarget); // button that triggered the modal
-            var transactionid = button.data('id');    // extract data
+            var transactionId = button.data('id');    // extract data
             var transactionCategoryId = button.data('category');
             var transactionWalletId = button.data('wallet');
             var transactionAmount = button.data('amount');
@@ -271,10 +303,20 @@
             var transactionSavingId = button.data('saving');
 
             var modal = $(this);
-            modal.find('.form-edit').attr('action', '/pynny/transactions/' + transactionCategoryId);
-            modal.find('#optionCategory' + transactionCategoryId).prop('selected', true);
+            if (transactionCategoryId === "none") {
+                modal.find('#editCategoryDefault').prop('selected', true);
+            } else {
+                modal.find('#optionCategory' + transactionCategoryId).prop('selected', true);
+            }
+
+            if (transactionSavingId === "none") {
+                modal.find('#editSavingDefault').prop('selected', true);
+            } else {
+                modal.find('#optionSaving' + transactionSavingId).prop('selected', true);
+            }
+
+            modal.find('form').attr('action', '/pynny/transactions/' + transactionId);
             modal.find('#optionWallet' + transactionWalletId).prop('selected', true);
-            modal.find('#optionSaving' + transactionSavingId).prop('selected', true);
             modal.find('#editTransactionAmount').val(transactionAmount);
             modal.find('#editTransactionDescription').val(transactionDescription);
             modal.find('#editTransactionCreatedAt').val(transactionDate);
