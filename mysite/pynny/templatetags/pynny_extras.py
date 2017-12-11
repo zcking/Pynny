@@ -1,11 +1,11 @@
 #!/usr/bin/env python3
-'''
-File: template_filters.py
+"""
+File: pynny_extras.py
 Author: Zachary King
 
 Implements custom Django template filters to be used
 in Django templates.
-'''
+"""
 
 from django.template.defaultfilters import register
 from datetime import date, datetime
@@ -16,6 +16,18 @@ from decimal import Decimal
 @register.simple_tag
 def saving_class(saving):
     ratio = (saving.balance / saving.goal) * Decimal('100')
+    if ratio < Decimal('25'):
+        return 'danger'
+    elif ratio < Decimal('50'):
+        return 'warning'
+    elif ratio < Decimal('75'):
+        return 'info'
+    return 'success'
+
+
+@register.simple_tag
+def debt_class(debt):
+    ratio = (debt.balance / debt.goal) * Decimal('100')
     if ratio < Decimal('25'):
         return 'danger'
     elif ratio < Decimal('50'):

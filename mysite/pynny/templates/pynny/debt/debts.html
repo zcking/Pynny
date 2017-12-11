@@ -1,0 +1,236 @@
+{% extends 'pynny/base/base.html' %}
+
+{% block title %}Debts - Pynny{% endblock %}
+
+{% block content %}
+
+<button class="btn btn-primary one-btn-group" type="button" data-toggle="modal" data-target="#createDebtModal">
+    <i class="fa fa-lg fa-plus-circle"></i>&nbsp;New Debt
+</button>
+
+
+<div class="modal fade" id="createDebtModal" role="dialog" aria-hidden="true">
+    <div class="modal-dialog" role="document">
+        <div class="modal-content">
+            <div class="modal-header">
+                <h5 class="modal-title">New Debt Goal</h5>
+                <button type="button" class="close" data-dismiss="modal" arial-label="Close">
+                    <span aria-hidden="true">&times;</span>
+                </button>
+            </div>
+            <form class="form-horizontal" action="{% url 'debts' %}" autocomplete="off" method="POST">
+                {% csrf_token %}
+
+                <div class="modal-body">
+                    <label for="inputDebtName">Name:</label>
+                    <div class="input-group modal-input-group">
+                        <input type="text" class="form-control" id="inputDebtName" name="name" placeholder="Student Loan" required />
+                    </div>
+
+                    <div class="modal-input-group">
+                        <label for="inputDebtGoal">Goal:</label>
+                        <input id="inputDebtGoal" class="form-control" type="number" name="goal" placeholder="0.0" required />
+                    </div>
+
+                    <div class="modal-input-group">
+                        <label for="inputDebtDueDate">Due Date:</label>
+                        <input id="inputDebtDueDate" class="form-control" type="date" name="due_date" />
+                    </div>
+
+                    <div class="row">
+                        <div class="col col-lg-6">
+                            <label for="inputDebtNotify">Notify On Completion:</label>
+                            <input id="inputDebtNotify" type="checkbox" name="notify" value="yes" />
+                        </div>
+
+                        <div class="col col-lg-6">
+                            <label for="inputDebtDelete">Delete On Completion:</label>
+                            <input id="inputDebtDelete" type="checkbox" name="delete" value="yes" />
+                        </div>
+                    </div>
+                </div>
+                <div class="modal-footer">
+                    <button type="button" class="btn btn-secondary" data-dismiss="modal">Cancel</button>
+                    <button type="submit" class="btn btn-primary">Create</button>
+                </div>
+            </form>
+        </div>
+    </div>
+</div>
+
+<div class="modal fade" id="editDueDateModal" role="dialog" aria-hidden="true">
+    <div class="modal-dialog" role="document">
+        <div class="modal-content">
+            <div class="modal-header">
+                <h5 class="modal-title">Edit Debt</h5>
+                <button type="button" class="close" data-dismiss="modal" arial-label="Close">
+                    <span aria-hidden="true">&times;</span>
+                </button>
+            </div>
+            <form class="form-edit" autocomplete="off" method="POST">
+                {% csrf_token %}
+                <div class="modal-body">
+                    <input type="hidden" name="action" value="edit_complete" />
+
+                    <label for="editDebtName">Name:</label>
+                    <div class="input-group modal-input-group">
+                        <input type="text" class="form-control" id="editDebtName" name="name" placeholder="Student Loan" required />
+                    </div>
+
+                    <div class="modal-input-group">
+                        <label for="editDebtGoal">Goal:</label>
+                        <input id="editDebtGoal" class="form-control" type="number" name="goal" placeholder="0.0" required />
+                    </div>
+
+                    <div class="modal-input-group">
+                        <label for="editDebtDueDate">Due Date:</label>
+                        <input id="editDebtDueDate" class="form-control" type="date" name="due_date" />
+                    </div>
+
+                    <div class="row">
+                        <div class="col col-lg-6">
+                            <label for="editDebtNotify">Notify On Completion:</label>
+                            <input id="editDebtNotify" type="checkbox" name="notify" value="yes" />
+                        </div>
+
+                        <div class="col col-lg-6">
+                            <label for="editDebtDelete">Delete On Completion:</label>
+                            <input id="editDebtDelete" type="checkbox" name="delete" value="yes" />
+                        </div>
+                    </div>
+                </div>
+                <div class="modal-footer">
+                    <button type="button" class="btn btn-secondary" data-dismiss="modal">Cancel</button>
+                    <button type="submit" class="btn btn-primary">Save</button>
+                </div>
+            </form>
+        </div>
+    </div>
+</div>
+
+<div class="modal fade" id="deleteDebtModal" role="dialog" aria-hidden="true">
+    <div class="modal-dialog" role="document">
+        <div class="modal-content">
+            <div class="modal-header">
+                <h5 class="modal-title">Delete Debt</h5>
+                <button type="button" class="close" data-dismiss="modal" arial-label="Close">
+                    <span aria-hidden="true">&times;</span>
+                </button>
+            </div>
+            <div class="modal-body">
+                <p>Are you sure you want to delete your "<span class="text-muted debtName"></span>" Debt?</p>
+
+                <form method="POST">
+                    {% csrf_token %}
+                    <input type="hidden" name="action" value="delete" />
+                    <button class="btn btn-danger" type="submit">
+                        <i class="fa fa-trash"></i>&nbsp;Delete
+                    </button>
+                    <button type="button" class="btn btn-secondary" data-dismiss="modal">Cancel</button>
+                </form>
+            </div>
+        </div>
+    </div>
+</div>
+
+{% if savings %}
+    <div class="row">
+    {% for debt in debts %}
+        <div class="col col-lg-4">
+            <div class="card savings-card">
+                <div class="card-header">
+                    <h5 class="card-title">{{ debt.name }} {% if debt.due_date %}<span class="text-muted">(Due {{ debt.due_date }})</span>{% endif %}</h5>
+                </div>
+
+                <div class="card-body">
+                    <div class="row">
+                        <div class="col-sm-4">
+                            <a href="{% url 'one_debt' debt_id=debt.id %}" class="btn-link">
+                                <button class="btn btn-wide" type="button"><i class="fa fa-lg fa-search-plus"></i></button>
+                            </a>
+                        </div>
+                        <div class="col-sm-4">
+                            <button type="button" class="btn btn-primary btn-wide" data-toggle="modal" data-target="#editDebtModal" data-id="{{ debt.id }}" data-created-time="{% fmt_time debt.created_time %}" data-name="{{ debt.name }}" data-goal="{{ debt.goal }}" data-balance="{{ debt.balance }}" data-due-date="{% fmt_time debt.due_date %}" data-notify="{{ debt.notify_on_completion }}" data-delete="{{ debt.delete_on_completion }}">
+                                <i class="fa fa-lg fa-pencil"></i>
+                            </button>
+                        </div>
+                        <div class="col-sm-4">
+                            <button type="button" class="btn btn-danger btn-wide" data-toggle="modal" data-target="#deleteDebtModal" data-id="{{ debt.id }}" data-name="{{ debt.name }}">
+                                <i class="fa fa-lg fa-trash"></i>
+                            </button>
+                        </div>
+                    </div>
+                </div>
+
+                <ul class="list-group list-group-flush">
+                    <li class="list-group-item text-center">
+                        Completed: {% if debt.completed %}<i class="fa fa-lg fa-check"></i>{% else %}<i class="fa fa-lg fa-times"></i>{% endif %}
+                    </li>
+                    <li class="list-group-item text-center">
+                        Notify On Completion: {% if debt.notify_on_completion %}<i class="fa fa-lg fa-check"></i>{% else %}<i class="fa fa-lg fa-times"></i>{% endif %}
+                    </li>
+                    <li class="list-group-item text-center">
+                        Delete On Completion: {% if debt.delete_on_completion %}<i class="fa fa-lg fa-check"></i>{% else %}<i class="fa fa-lg fa-times"></i>{% endif %}
+                    </li>
+                    <li class="list-group-item text-center">
+                        <span class="text-muted">Started {{ debt.created_time }}</span>
+                    </li>
+                </ul>
+
+                <div class="card-footer">
+                    <div class="progress">
+                        <div class="progress-bar progress-bar-striped bg-{% debt_class debt %}" role="progressbar" style="width: {% saving_prg_bar_width debt %}%" aria-valuenow="{{ debt.balance }}" aria-valuemin="0" aria-valuemax="{{ debt.goal }}">
+                            <span>${{ debt.balance }} / ${{ debt.goal }}</span>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+    {% endfor %}
+    </div>
+{% else %}
+    <div class="alert alert-info">
+        <strong>Heads up!</strong> You haven't created any debts to track yet. Get started
+        by clicking <span class="alert-link" style="cursor: pointer" data-toggle="modal" data-target="#createDebtModal">New Debt</span>.
+    </div>
+{% endif %}
+
+<script>
+    $(document).ready(function() {
+
+        $('#editDebtModal').on('show.bs.modal', function(event) {
+            var button = $(event.relatedTarget); // button that triggered the modal
+            var debtId = button.data('id');    // extract data
+            var debtName = button.data('name');
+            var debtGoal = button.data('goal');
+            var debtBalance = button.data('balance');
+            var debtDueDate = button.data('due-date');
+            var debtCreatedTime = button.data('created-time');
+            var debtNotify = button.data('notify');
+            var debtDelete = button.data('delete');
+
+            var modal = $(this);
+            modal.find('.form-edit').attr('action', '/pynny/debt/' + debtId);
+            modal.find('#editDebtName').val(debtName);
+            modal.find('#editDebtGoal').val(debtGoal);
+            modal.find('#editDebtBalance').val(debtBalance);
+            if (debtNotify === 'True')
+                modal.find('#editDebtNotify').prop('checked', true);
+            if (debtDelete === 'True')
+                modal.find('#editDebtDelete').prop('checked', true);
+            modal.find('#editDebtDueDate').val(debtDueDate);
+        });
+
+        $('#deleteDebtModal').on('show.bs.modal', function(event) {
+            var button = $(event.relatedTarget); // button that triggered the modal
+            var debtId = button.data('id');    // extract data
+            var debtName = button.data('name');
+
+            var modal = $(this);
+            modal.find('form').attr('action', '/pynny/debt/' + debtId);
+            modal.find('.debtName').text(debtName);
+        });
+    });
+</script>
+
+{% endblock %}

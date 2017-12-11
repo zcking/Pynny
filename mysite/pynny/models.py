@@ -86,6 +86,27 @@ class Savings(models.Model):
 
 
 @python_2_unicode_compatible
+class Debt(models.Model):
+    """A representation of a debt. Used to track a user's
+    history of transactions on a particular paying or receiving debt"""
+    is_receiving = models.BooleanField(default=False, blank=False, null=False)
+    goal = models.DecimalField(max_digits=20, decimal_places=2, blank=False)
+    balance = models.DecimalField(max_digits=20, decimal_places=2, default=0.0, blank=False)
+    delete_on_completion = models.BooleanField(default=False, blank=False)
+    name = models.CharField(max_length=100, blank=False)
+    created_time = models.DateTimeField(editable=False, blank=True, default=timezone.now)
+    due_date = models.DateField(blank=True)
+    notify_on_completion = models.BooleanField(default=True, blank=False)
+    completed = models.BooleanField(default=False, blank=True)
+    hidden = models.BooleanField(default=False, blank=True)
+    user = models.ForeignKey(auth.get_user_model(), on_delete=models.CASCADE)
+
+    def __str__(self):
+        """Returns the name of the debt object"""
+        return self.name
+
+
+@python_2_unicode_compatible
 class Transaction(models.Model):
     """A record of income or an expense. `amount`
     uses the Python `decimal.Decimal` class.
@@ -102,6 +123,7 @@ class Transaction(models.Model):
     wallet = models.ForeignKey(Wallet, on_delete=models.CASCADE)
     user = models.ForeignKey(auth.get_user_model(), on_delete=models.CASCADE)
     saving = models.ForeignKey(Savings, on_delete=models.CASCADE, blank=True, null=True)
+    debt = models.ForeignKey(Debt, on_delete=models.CASCADE, blank=True, null=True)
 
     def __str__(self):
         """Returns the string representation (`name`)"""
@@ -128,24 +150,3 @@ class Budget(models.Model):
     def __str__(self):
         """Returns the string representation (`name`)"""
         return self.category.name
-
-
-@python_2_unicode_compatible
-class Debt(models.Model):
-    """A representation of a debt. Used to track a user's
-    history of transactions on a particular paying or receiving debt"""
-    is_receiving = models.BooleanField(default=False, blank=False, null=False)
-    goal = models.DecimalField(max_digits=20, decimal_places=2, blank=False)
-    balance = models.DecimalField(max_digits=20, decimal_places=2, default=0.0, blank=False)
-    delete_on_completion = models.BooleanField(default=False, blank=False)
-    name = models.CharField(max_length=100, blank=False)
-    created_time = models.DateTimeField(editable=False, blank=True, default=timezone.now)
-    due_date = models.DateField(blank=True)
-    notify_on_completion = models.BooleanField(default=True, blank=False)
-    completed = models.BooleanField(default=False, blank=True)
-    hidden = models.BooleanField(default=False, blank=True)
-    user = models.ForeignKey(auth.get_user_model(), on_delete=models.CASCADE)
-
-    def __str__(self):
-        """Returns the name of the debt object"""
-        return self.name
