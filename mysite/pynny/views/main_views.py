@@ -67,7 +67,7 @@ def logout_view(request):
 
     data = {
         'alerts': {
-            'success': ['<strong>Done!</strong> You have been logged out successfully']
+            'success': ['You have been logged out successfully.']
         }
     }
     return render(request, 'registration/login.html', context=data)
@@ -104,25 +104,25 @@ def settings_view(request):
                 if len(get_user_model().objects.filter(email=email)) == 0:
                     request.user.email = email
                 else:
-                    data['alerts']['errors'].append('<strong>Oh Snap!</strong> A user already exists with that email')
+                    data['alerts']['errors'].append('A user already exists with that email.')
                     has_errors = True
 
             if username and username != request.user.username:
                 if len(get_user_model().objects.filter(username=username)) == 0:
                     request.user.username = username
                 else:
-                    data['alerts']['errors'].append('<strong>Oh Snap!</strong> A user already exists with that username')
+                    data['alerts']['errors'].append('A user already exists with that username.')
                     has_errors = True
 
             if new_pass:
                 if verify_new_pass and verify_new_pass == new_pass:
                     request.user.set_password(new_pass)
                 elif verify_new_pass:
-                    data['alerts']['errors'].append('<strong>Oh Snap!</strong> The new password you entered does match')
+                    data['alerts']['errors'].append('The new password you entered does match.')
                     has_errors = True
 
             if not has_errors:
                 request.user.save()
-                data['alerts']['success'].append('<strong>Done!</strong> You\'re settings have been updated successfully!')
+                data['alerts']['success'].append('You\'re settings have been updated successfully!')
 
             return render(request, 'pynny/base/settings.html', context=data)
