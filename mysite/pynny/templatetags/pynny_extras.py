@@ -44,10 +44,11 @@ def saving_prg_bar_width(saving):
 
 @register.filter
 def get_item(dictionary, key):
-    '''Custom filter for getting a value from a dictionary
+    """Custom filter for getting a value from a dictionary
     inside a Django template. To use in a template:
-    `{{ my_dict|get_item:item.NAME }}'''
+    `{{ my_dict|get_item:item.NAME }}"""
     return dictionary.get(key)
+
 
 @register.simple_tag
 def wallet_class(balance):
@@ -57,11 +58,13 @@ def wallet_class(balance):
         return 'danger'
     return 'default'
 
+
 @register.simple_tag
 def category_class(is_income):
     if is_income:
         return 'success'
     return 'danger'
+
 
 @register.simple_tag
 def budget_class(budget):
@@ -80,17 +83,23 @@ def budget_class(budget):
         return 'warning'
     return 'success'
 
+
 @register.simple_tag
 def get_month(d):
     return date.strftime(d, '%B, %Y')
 
+
 @register.simple_tag
 def fmt_time(t):
-    return datetime.strftime(t, '%Y-%m-%d')
+    try:
+        return datetime.strftime(t, '%Y-%m-%d')
+    except:
+        return 'N/A'
+
 
 @register.simple_tag
 def transaction_class(transaction):
-    '''Returns a Bootstrap class string for a Transaction'''
+    """Returns a Bootstrap class string for a Transaction"""
     if transaction.amount == 0:
         return 'default'
 
@@ -111,7 +120,7 @@ def transaction_class(transaction):
 
 @register.simple_tag
 def shorten_string(string, limit):
-    '''Returns the string, shortened to limit chars and with '...' appended'''
+    """Returns the string, shortened to limit chars and with '...' appended"""
     if len(string) <= limit:
         return string
     return string[:limit-3] + '...'

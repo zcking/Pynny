@@ -46,6 +46,7 @@ class DebtsView(LoginRequiredMixin, View):
 
         notify = 'notify' in request.POST
         delete = 'delete' in request.POST
+        is_receiving = request.POST.get('isReceiving', 'no') == 'yes'
 
         # Check if the debt name exists already
         if Debt.objects.filter(user=request.user, name=name):
@@ -55,6 +56,7 @@ class DebtsView(LoginRequiredMixin, View):
 
         # Create the new debt
         Debt(name=name, goal=goal, balance=decimal.Decimal('0'),
+             is_receiving=is_receiving,
              due_date=due_date if due_date else None,
              delete_on_completion=delete,
              notify_on_completion=notify, completed=False, hidden=False, user=request.user).save()
@@ -122,6 +124,7 @@ class SingleDebtView(LoginRequiredMixin, View):
                     due_date = None
             notify = True if 'notify' in request.POST else False
             delete = True if 'delete' in request.POST else False
+            is_receiving = request.POST.get('isReceiving', 'no') == 'yes'
 
             # Make sure the new name doesn't already exist
             if name != debt.name and Debt.objects.filter(user=request.user, name=name):
@@ -135,6 +138,7 @@ class SingleDebtView(LoginRequiredMixin, View):
             debt.due_date = due_date if due_date is not None else debt.due_date
             debt.notify_on_completion = notify
             debt.delete_on_completion = delete
+            debt.is_receiving = is_receiving
             if debt.goal <= debt.balance:
                 complete_debt(debt)
                 context['alerts'] = {'success': ['Debt updated successfully.']}

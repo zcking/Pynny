@@ -31,7 +31,7 @@ urlpatterns = [
     url(r'^savings/$', savings_views.SavingsView.as_view(), name='savings'),  # /savings/
     url(r'^savings/(?P<savings_id>[0-9]+)$', savings_views.SingleSavingView.as_view(), name='one_saving'),  # /savings/5
     url(r'^debt/$', debt_views.DebtsView.as_view(), name='debts'),
-    url(r'^debt/(?P<debt_id>[0-9]})$', debt_views.SingleDebtView.as_view(), name='one_debt'),
+    url(r'^debt/(?P<debt_id>[0-9])$', debt_views.SingleDebtView.as_view(), name='one_debt'),
     url(r'^notifications/dismiss/$', notification_views.dismiss_notice, name='dismiss_notice'),
     url(r'^settings/$', main_views.settings_view, name='settings'),  # /settings/
 ]

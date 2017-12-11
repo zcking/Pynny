@@ -95,7 +95,7 @@ class Debt(models.Model):
     delete_on_completion = models.BooleanField(default=False, blank=False)
     name = models.CharField(max_length=100, blank=False)
     created_time = models.DateTimeField(editable=False, blank=True, default=timezone.now)
-    due_date = models.DateField(blank=True)
+    due_date = models.DateField(blank=True, null=True)
     notify_on_completion = models.BooleanField(default=True, blank=False)
     completed = models.BooleanField(default=False, blank=True)
     hidden = models.BooleanField(default=False, blank=True)

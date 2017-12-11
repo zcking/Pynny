@@ -40,12 +40,22 @@
                     <div class="row">
                         <div class="col col-lg-6">
                             <label for="inputDebtNotify">Notify On Completion:</label>
-                            <input id="inputDebtNotify" type="checkbox" name="notify" value="yes" />
+                            <input id="inputDebtNotify" type="checkbox" name="notify" value="yes" checked />
                         </div>
 
                         <div class="col col-lg-6">
                             <label for="inputDebtDelete">Delete On Completion:</label>
                             <input id="inputDebtDelete" type="checkbox" name="delete" value="yes" />
+                        </div>
+                    </div>
+
+                    <div class="row">
+                        <div class="col col-lg-12">
+                            <label for="inputDebtIsReceiving">Receiving/Making Payments:</label>
+                            <select id="inputDebtIsReceiving" name="isReceiving" class="form-control">
+                                <option value="no">Making Payments</option>
+                                <option value="yes">Receiving Payments</option>
+                            </select>
                         </div>
                     </div>
                 </div>
@@ -58,7 +68,7 @@
     </div>
 </div>
 
-<div class="modal fade" id="editDueDateModal" role="dialog" aria-hidden="true">
+<div class="modal fade" id="editDebtModal" role="dialog" aria-hidden="true">
     <div class="modal-dialog" role="document">
         <div class="modal-content">
             <div class="modal-header">
@@ -98,6 +108,16 @@
                             <input id="editDebtDelete" type="checkbox" name="delete" value="yes" />
                         </div>
                     </div>
+
+                    <div class="row">
+                        <div class="col col-lg-12">
+                            <label for="editDebtIsReceiving">Receiving/Making Payments:</label>
+                            <select id="editDebtIsReceiving" name="isReceiving" class="form-control">
+                                <option id="editDebtReceivingPayments" value="no">Making Payments</option>
+                                <option id="editDebtMakingPayments" value="yes">Receiving Payments</option>
+                            </select>
+                        </div>
+                    </div>
                 </div>
                 <div class="modal-footer">
                     <button type="button" class="btn btn-secondary" data-dismiss="modal">Cancel</button>
@@ -133,7 +153,7 @@
     </div>
 </div>
 
-{% if savings %}
+{% if debts %}
     <div class="row">
     {% for debt in debts %}
         <div class="col col-lg-4">
@@ -150,7 +170,7 @@
                             </a>
                         </div>
                         <div class="col-sm-4">
-                            <button type="button" class="btn btn-primary btn-wide" data-toggle="modal" data-target="#editDebtModal" data-id="{{ debt.id }}" data-created-time="{% fmt_time debt.created_time %}" data-name="{{ debt.name }}" data-goal="{{ debt.goal }}" data-balance="{{ debt.balance }}" data-due-date="{% fmt_time debt.due_date %}" data-notify="{{ debt.notify_on_completion }}" data-delete="{{ debt.delete_on_completion }}">
+                            <button type="button" class="btn btn-primary btn-wide" data-toggle="modal" data-target="#editDebtModal" data-id="{{ debt.id }}" data-created-time="{% fmt_time debt.created_time %}" data-name="{{ debt.name }}" data-goal="{{ debt.goal }}" data-balance="{{ debt.balance }}" data-due-date="{% fmt_time debt.due_date %}" data-notify="{{ debt.notify_on_completion }}" data-delete="{{ debt.delete_on_completion }}" data-receiving="{% if debt.is_receiving %}True{% else %}False{% endif %} }}">
                                 <i class="fa fa-lg fa-pencil"></i>
                             </button>
                         </div>
@@ -171,6 +191,9 @@
                     </li>
                     <li class="list-group-item text-center">
                         Delete On Completion: {% if debt.delete_on_completion %}<i class="fa fa-lg fa-check"></i>{% else %}<i class="fa fa-lg fa-times"></i>{% endif %}
+                    </li>
+                    <li class="list-group-item text-center">
+                        <em>{% if debt.is_receiving %}Receiving{% else %}Making{% endif %} Payments</em>
                     </li>
                     <li class="list-group-item text-center">
                         <span class="text-muted">Started {{ debt.created_time }}</span>
@@ -208,12 +231,21 @@
             var debtCreatedTime = button.data('created-time');
             var debtNotify = button.data('notify');
             var debtDelete = button.data('delete');
+            var debtReceiving = button.data('receiving');
 
             var modal = $(this);
             modal.find('.form-edit').attr('action', '/pynny/debt/' + debtId);
             modal.find('#editDebtName').val(debtName);
             modal.find('#editDebtGoal').val(debtGoal);
             modal.find('#editDebtBalance').val(debtBalance);
+            if (debtReceiving === 'True') {
+                modal.find('#editDebtMakingPayments').prop('selected', false);
+                modal.find('#editDebtReceivingPayments').prop('selected', true);
+            } else {
+                modal.find('#editDebtReceivingPayments').prop('selected', false);
+                modal.find('#editDebtMakingPayments').prop('selected', true);
+            }
+
             if (debtNotify === 'True')
                 modal.find('#editDebtNotify').prop('checked', true);
             if (debtDelete === 'True')
